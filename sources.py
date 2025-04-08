@@ -1,5 +1,7 @@
 SOURCES = [
-    {"url": "https://nova.rs", "name": "Nova RS", "bias": "opposition"},
-    {"url": "https://informer.rs", "name": "Informer", "bias": "pro_vucic"},
+    {"url": "https://informer.rs/politika", "name": "Informer", "bias": "pro_vucic"},
+    {"url": "https://nova.rs/vesti/politika/", "name": "Nova RS", "bias": "opposition"},
+    {"url": "https://n1info.rs/vesti/", "name": "N1", "bias": "opposition"},
+    {"url": "https://pink.rs/politika", "name": "Pink", "bias": "pro_vucic"}
     # Add more sites here
 ]

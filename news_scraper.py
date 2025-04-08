@@ -3,65 +3,66 @@ from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 import csv
 import time
+import os
+import re
 from scraping_rules import SCRAPING_RULES
 from sources import SOURCES
-import os
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import time
 
-# Configure user-agent to mimic a browser
+
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
 }
 
 def fetch_page(url):
-    """Fetch a page with error handling and encoding support."""
     try:
         response = requests.get(url, headers=HEADERS, timeout=10)
-        response.encoding = 'utf-8'  # Force UTF-8 for Serbian text
+        response.encoding = 'utf-8'
         response.raise_for_status()
         return response.text
     except Exception as e:
         print(f"🚨 Failed to fetch {url}: {str(e)}")
         return None
 
+def clean_paragraphs(body, scrape_all_p):
+    text_parts = []
+    for tag in body.find_all(["div", "figure"]):
+        tag.decompose()
 
-def extract_article_body(article_url, site_rules):
-    """Scrape the full text of an individual article."""
+    paragraphs = body.find_all("p") if scrape_all_p else body.find("p")
+    if not paragraphs:
+        return []
+
+    if not isinstance(paragraphs, list):  # Single paragraph
+        paragraphs = [paragraphs]
+
+    for p in paragraphs:
+        text = p.get_text(separator=' ', strip=True)
+        text = re.sub(r'Ostavite komentar|Autor:.*', '', text)
+        if text and text not in text_parts:
+            text_parts.append(text)
+
+    return text_parts
+
+def extract_article_body(article_url, rules):
     html = fetch_page(article_url)
     if not html:
         return None
-
     soup = BeautifulSoup(html, 'html.parser')
-
-    text_parts = []
-
-    # Extract paragraphs from the main content container
-    if "full_text_container" in site_rules:
-        body = soup.select_one(site_rules["full_text_container"])
-        if body:
-            for unwanted in body.find_all("div"):
-                unwanted.decompose()
-            for unwanted in body.find_all("figure"):
-                unwanted.decompose()
-            if not site_rules["scrape_all_p"]: # Informer
-                for p in body.find('p'):
-                    paragraph = p.get_text(separator=' ', strip=True).replace("Ostavite komentar", "")
-                    if paragraph and paragraph not in text_parts:
-                        text_parts.append(paragraph)
-            else: # Nova S
-                for p in body.find_all('p'):
-                    paragraph = p.get_text(separator=' ', strip=True)
-                    if paragraph and paragraph not in text_parts:
-                        text_parts.append(paragraph)
-    return " ".join(text_parts) if text_parts else None
-
+    container = soup.select_one(rules.get("full_text_container", ""))
+    if container:
+        paragraphs = clean_paragraphs(container, rules.get("scrape_all_p", False))
+        return " ".join(paragraphs) if paragraphs else None
+    return None
 
 def scrape_news_site(base_url, site_name, bias):
     """Scrape a single news site for headlines and full article text."""
     domain = base_url.split("//")[-1].split("/")[0]
-    rules = SCRAPING_RULES.get(domain, {})
+    sections = SCRAPING_RULES.get(domain, {})
 
-    if not rules:
-        print(f"⚠️ No scraping rules defined for {domain}. Skipping.")
+    if not sections:
+        print(f"⚠️ No scraping sections defined for {domain}. Skipping.")
         return []
 
     print(f"🔍 Scraping {site_name} ({base_url})...")
@@ -71,42 +72,57 @@ def scrape_news_site(base_url, site_name, bias):
 
     soup = BeautifulSoup(html, 'html.parser')
     articles = []
+    tasks = []
 
-    for item in soup.select(rules["container"], limit=5):
+    def process_article(item, rules):
         try:
-            link = item.select_one(rules["link"])["href"] if item.select_one(rules["link"]) else None
-            title = item.select_one(rules["title"]).get_text(strip=True) if item.select_one(
-                rules["title"]) else None
-            print(link, title)
-            if not link or not title:
-                continue
-
+            link_tag = item.select_one(rules["link"])
+            title_tag = item.select_one(rules["title"])
+            if not link_tag or not title_tag:
+                return None
+            link = link_tag["href"]
+            title = title_tag.get_text(strip=True)
             full_url = urljoin(base_url, link)
             body = extract_article_body(full_url, rules)
-            print(body)
             if body:
-                articles.append({
+                print(f"  ✔️ Scraped: {title[:50]}...")
+                return {
                     "source": site_name,
                     "bias": bias,
                     "title": title,
                     "url": full_url,
                     "text": body
-                })
-                print(f"  ✔️ Scraped: {title[:50]}...")
-            time.sleep(1)  # Be polite between requests
-
+                }
         except Exception as e:
             print(f"❌ Error processing article: {str(e)}")
-            continue
+            return None
+
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        for section in sections:
+            rules = sections.get(section, {})
+            if site_name == "Informer" and rules.get("subsections"):
+                subsection = soup.find_all(attrs={"data-category": "#e6272a"})
+                if not subsection:
+                    continue
+                for item in subsection[-1].select(rules["container"]):
+                    tasks.append(executor.submit(process_article, item, rules))
+            elif site_name == "Informer":
+                for main_news in soup.select(rules["main_container"]):
+                    for item in main_news.select(rules["container"]):
+                        tasks.append(executor.submit(process_article, item, rules))
+            else:
+                for item in soup.select(rules["container"]):
+                    tasks.append(executor.submit(process_article, item, rules))
+
+        for task in tasks:
+            result = task.result()
+            if result:
+                articles.append(result)
 
     return articles
 
-
 def save_to_csv(data, filename="example_output/serbian_news_articles.csv"):
-    """Save scraped data to a CSV file."""
-    # Ensure the output directory exists
     os.makedirs(os.path.dirname(filename), exist_ok=True)
-
     with open(filename, 'w', newline='', encoding='utf-8') as f:
         writer = csv.DictWriter(f, fieldnames=["source", "bias", "title", "url", "text"])
         writer.writeheader()
@@ -114,15 +130,28 @@ def save_to_csv(data, filename="example_output/serbian_news_articles.csv"):
     print(f"✅ Saved {len(data)} articles to {filename}")
 
 if __name__ == "__main__":
+    start_time = time.time()
     all_articles = []
 
-    for source in SOURCES:
-        articles = scrape_news_site(source["url"], source["name"], source["bias"])
-        all_articles.extend(articles)
-        print(f"Found {len(articles)} articles from {source['name']}")
-        time.sleep(2)  # Delay between sites
+    with ThreadPoolExecutor(max_workers=5) as executor:
+        futures = {
+            executor.submit(scrape_news_site, source["url"], source["name"], source["bias"]): source
+            for source in SOURCES
+        }
+
+        for future in as_completed(futures):
+            source = futures[future]
+            try:
+                articles = future.result()
+                all_articles.extend(articles)
+                print(f"✅ Found {len(articles)} articles from {source['name']}")
+            except Exception as e:
+                print(f"❌ Error scraping {source['name']}: {e}")
 
     if all_articles:
         save_to_csv(all_articles)
     else:
         print("No articles were scraped. Check your selectors.")
+
+    elapsed_time = time.time() - start_time
+    print(f"⏱ Total scraping time: {elapsed_time:.2f} seconds")
