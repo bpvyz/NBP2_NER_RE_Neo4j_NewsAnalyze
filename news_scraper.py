@@ -1,15 +1,13 @@
 import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
-import csv
+import json
 import time
 import os
 import re
 from scraping_rules import SCRAPING_RULES
 from sources import SOURCES
 from concurrent.futures import ThreadPoolExecutor, as_completed
-import time
-
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
@@ -45,6 +43,7 @@ def clean_paragraphs(body, scrape_all_p):
 
     return text_parts
 
+
 def extract_article_body(article_url, rules):
     html = fetch_page(article_url)
     if not html:
@@ -57,7 +56,6 @@ def extract_article_body(article_url, rules):
     return None
 
 def scrape_news_site(base_url, site_name, bias):
-    """Scrape a single news site for headlines and full article text."""
     domain = base_url.split("//")[-1].split("/")[0]
     sections = SCRAPING_RULES.get(domain, {})
 
@@ -121,12 +119,10 @@ def scrape_news_site(base_url, site_name, bias):
 
     return articles
 
-def save_to_csv(data, filename="example_output/serbian_news_articles.csv"):
+def save_to_json(data, filename="example_output/serbian_news_articles.json"):
     os.makedirs(os.path.dirname(filename), exist_ok=True)
-    with open(filename, 'w', newline='', encoding='utf-8') as f:
-        writer = csv.DictWriter(f, fieldnames=["source", "bias", "title", "url", "text"])
-        writer.writeheader()
-        writer.writerows(data)
+    with open(filename, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
     print(f"✅ Saved {len(data)} articles to {filename}")
 
 if __name__ == "__main__":
@@ -149,7 +145,7 @@ if __name__ == "__main__":
                 print(f"❌ Error scraping {source['name']}: {e}")
 
     if all_articles:
-        save_to_csv(all_articles)
+        save_to_json(all_articles)
     else:
         print("No articles were scraped. Check your selectors.")
 
