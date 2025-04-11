@@ -8,6 +8,12 @@ import re
 from scraping_rules import SCRAPING_RULES
 from sources import SOURCES
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from colorama import Fore, init
+import threading
+
+init(autoreset=True)
+
+print_lock = threading.Lock()
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
@@ -20,7 +26,7 @@ def fetch_page(url):
         response.raise_for_status()
         return response.text
     except Exception as e:
-        print(f"🚨 Failed to fetch {url}: {str(e)}")
+        print(Fore.RED + f"🚨 Failed to fetch {url}: {str(e)}")
         return None
 
 def clean_paragraphs(body, scrape_all_p):
@@ -55,15 +61,16 @@ def extract_article_body(article_url, rules):
         return " ".join(paragraphs) if paragraphs else None
     return None
 
+
 def scrape_news_site(base_url, site_name, bias):
     domain = base_url.split("//")[-1].split("/")[0]
     sections = SCRAPING_RULES.get(domain, {})
 
     if not sections:
-        print(f"⚠️ No scraping sections defined for {domain}. Skipping.")
+        print(Fore.YELLOW + f"⚠️ No scraping sections defined for {domain}. Skipping.")
         return []
 
-    print(f"🔍 Scraping {site_name} ({base_url})...")
+    print(Fore.CYAN + f"🔍 Scraping {site_name} ({base_url})...")
     html = fetch_page(base_url)
     if not html:
         return []
@@ -72,18 +79,29 @@ def scrape_news_site(base_url, site_name, bias):
     articles = []
     tasks = []
 
+    def is_politics_url(url):
+        """Check if URL belongs to politics section"""
+        politics_keywords = ['/politika/', '/politics/', '/vesti/', '/news/']
+        return any(kw in url.lower() for kw in politics_keywords)
+
     def process_article(item, rules):
         try:
             link_tag = item.select_one(rules["link"])
             title_tag = item.select_one(rules["title"])
             if not link_tag or not title_tag:
                 return None
+
             link = link_tag["href"]
+            if not is_politics_url(link):  # Skip non-political articles
+                return None
+
             title = title_tag.get_text(strip=True)
             full_url = urljoin(base_url, link)
             body = extract_article_body(full_url, rules)
+
             if body:
-                print(f"  ✔️ Scraped: {title[:50]}...")
+                with print_lock:
+                    print(Fore.GREEN + f"  ✔️ Scraped: {title[:50]}...")
                 return {
                     "source": site_name,
                     "bias": bias,
@@ -92,10 +110,12 @@ def scrape_news_site(base_url, site_name, bias):
                     "text": body
                 }
         except Exception as e:
-            print(f"❌ Error processing article: {str(e)}")
+            print(Fore.RED + f"❌ Error processing article: {str(e)}")
             return None
 
-    with ThreadPoolExecutor(max_workers=10) as executor:
+    # Rest of your existing code...
+
+    with ThreadPoolExecutor(max_workers=5) as executor:
         for section in sections:
             rules = sections.get(section, {})
             if site_name == "Informer" and rules.get("subsections"):
@@ -123,7 +143,7 @@ def save_to_json(data, filename="example_output/serbian_news_articles.json"):
     os.makedirs(os.path.dirname(filename), exist_ok=True)
     with open(filename, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
-    print(f"✅ Saved {len(data)} articles to {filename}")
+    print(Fore.GREEN + f"✅ Saved {len(data)} articles to {filename}")
 
 if __name__ == "__main__":
     start_time = time.time()
@@ -140,14 +160,17 @@ if __name__ == "__main__":
             try:
                 articles = future.result()
                 all_articles.extend(articles)
-                print(f"✅ Found {len(articles)} articles from {source['name']}")
+                with print_lock:
+                    print(Fore.RED + f"✅ Found {len(articles)} articles from {source['name']}")
             except Exception as e:
-                print(f"❌ Error scraping {source['name']}: {e}")
+                with print_lock:
+                    print(Fore.RED + f"❌ Error scraping {source['name']}: {e}")
 
     if all_articles:
         save_to_json(all_articles)
     else:
-        print("No articles were scraped. Check your selectors.")
+        print(Fore.RED + "No articles were scraped. Check your selectors.")
 
     elapsed_time = time.time() - start_time
-    print(f"⏱ Total scraping time: {elapsed_time:.2f} seconds")
+    with print_lock:
+        print(Fore.YELLOW + f"⏱ Total scraping time: {elapsed_time:.2f} seconds")
