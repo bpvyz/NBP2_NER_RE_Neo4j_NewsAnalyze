@@ -1,59 +1,92 @@
 import json
-from openai import OpenAI
 import os
 import re
+import asyncio
+from openai import AsyncOpenAI
+import time
+from tqdm.asyncio import tqdm_asyncio
 
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+# Inicijalizacija asinhronog klijenta
+client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-# Učitajte JSON podatke (pretpostavljamo da su u fajlu)
+# Učitaj vesti iz JSON fajla
 with open("example_output/serbian_news_articles.json", "r", encoding="utf-8") as f:
     news_data = json.load(f)
 
-def extract_entities_and_relations(text):
+async def extract_entities_and_relations(text):
     prompt = f"""
-    Izvuci entitete (osobe, organizacije, lokacije, grupe, aktivnosti, itd.) i deskriptivne relacije (događaji, akcije, interakcije) iz sledećeg teksta vesti, koristeći odgovarajuće tipove za Neo4j. Relacije treba da budu konkretne, jasno definisane između entiteta, dok entiteti treba da budu označeni sa odgovarajućim labelama (npr. Politician, Location, Group, Activity, itd.).
-
+    Izvuci entitete (osobe, organizacije, lokacije, grupe, aktivnosti, itd.) i deskriptivne relacije (događaji, akcije, interakcije) iz sledećeg teksta vesti, 
+    koristeći odgovarajuće tipove za Neo4j. Relacije treba da budu konkretne, jasno definisane između entiteta, dok entiteti treba da budu označeni sa odgovarajućim labelama 
+    (npr. Osoba, Organizacija, Lokacija, Vreme, Aktivnost/Događaj, Vozilo, Proizvod, Umetničko delo, Dokument, Hrana/Piće, Životinja, Biljka, Tehnologija, itd.).
 
     Tekst vesti:
     {text}
 
     Odgovor u sledećem formatu:
     Entiteti: [entitet1:label, entitet2:label, entitet3:label]
-    Relacije: [entitet1 -[:relation]-> entitet2, entitet3 -[:relation]> entitet4]
-    
+    Relacije: [entitet1 -[:relation]-> entitet2, entitet3 -[:relation]-> entitet4]
+
     Bez uvodnih fraza, samo entiteti i relacije, tačno u ovom formatu.
     Za svaki entitet formirati odgovarajucu relaciju.
+    Za svaki entitet koji ucestvuje u relaciji formirati odgovarajuci label.
+    Svi entiteti i sve relacije moraju biti isključivo na srpskom jeziku. Nije dozvoljeno koristiti engleske, hrvatske ili strane nazive.
+    Na primer, 'European Union' treba biti 'Evropska unija', 'Germany' treba biti 'Nemačka', 'Croatian police' treba biti 'hrvatska policija'.
     """
 
-    response = client.responses.create(
-        model = "gpt-4o-mini",
-        input = prompt
+    response = await client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.2
     )
 
-    return response.output_text
+    return response.choices[0].message.content.strip()
 
-# Prođite kroz svaku vest i izvucite entitete i relacije
-with open('entities_and_relations.json', 'w', encoding='utf-8') as outfile:
-    # Kreiranje liste za čuvanje svih rezultata
-    results = []
+async def process_article(article):
+    text = article.get("text", "")
+    if not text:
+        return None
 
-    #for article in news_data:
-    text = news_data[0].get('text', '') # replace news_data[0] with article
-    if text:
-        entities_and_relations = extract_entities_and_relations(text)
-        entities = re.search(r'Entiteti: \[(.*?)\]', entities_and_relations).group(1)
-        relations = re.search(r'Relacije: \[(.*]?)\]', entities_and_relations).group(1)
+    try:
+        entities_and_relations = await extract_entities_and_relations(text)
 
-        results.append({
-            'article_source': news_data[0].get('source', ''),
-            'article_bias': news_data[0].get('bias', ''),
-            'article_title': news_data[0].get('title', ''),  # Možete dodati id vesti ako je dostupan
-            'article_url': news_data[0].get('url', ''),
-            'article_text': news_data[0].get('text', ''),
-            'entities_and_relations': entities_and_relations,
-            'entities': entities,
-            'relations': relations
-        }) # replace news_data[0] with article
+        entities_match = re.search(r'Entiteti: \[(.*?)\]', entities_and_relations)
+        relations_match = re.search(r'Relacije: \[(.*]?)\]', entities_and_relations)
 
-    # Snimi sve rezultate u JSON fajl
-    json.dump(results, outfile, ensure_ascii=False, indent=4)
+        entities = entities_match.group(1) if entities_match else ""
+        relations = relations_match.group(1) if relations_match else ""
+
+        return {
+            "article_source": article.get("source", ""),
+            "article_bias": article.get("bias", ""),
+            "article_title": article.get("title", ""),
+            "article_url": article.get("url", ""),
+            "article_text": text,
+            "entities_and_relations": entities_and_relations,
+            "entities": entities,
+            "relations": relations
+        }
+
+    except Exception as e:
+        print(f"Greška za članak '{article.get('title', '')}': {e}")
+        return None
+
+async def process_articles():
+
+    subset = news_data
+
+    results = await tqdm_asyncio.gather(
+        *(process_article(article) for article in subset),
+        desc="🔍 Obrada vesti",
+        total=len(subset)
+    )
+
+    results = [r for r in results if r]
+
+    with open("entities_and_relations.json", "w", encoding="utf-8") as outfile:
+        json.dump(results, outfile, ensure_ascii=False, indent=4)
+
+if __name__ == "__main__":
+    start_time = time.time()
+    asyncio.run(process_articles())
+    elapsed_time = time.time() - start_time
+    print(f"\n⏱ Total analyzing time: {elapsed_time:.2f} seconds")
