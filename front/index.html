@@ -315,9 +315,24 @@
     <div class="app-container" id="appContainer">
         <!-- Article List Sidebar -->
         <div class="article-list">
-            <h2 class="article-list-title">Recent Articles</h2>
+            <h2 class="article-list-title">N1</h2>
             <div class="article-item" data-article-id="1">
-                <div class="article-item-title">Web Design Trends 2024</div>
+                <div class="article-item-title">Naslov članka</div>
+                <div class="article-item-meta">May 15, 2024 • 5 min read</div>
+            </div>
+            <h2 class="article-list-title">Nova S</h2>
+            <div class="article-item" data-article-id="2">
+                <div class="article-item-title">Naslov članka</div>
+                <div class="article-item-meta">May 15, 2024 • 5 min read</div>
+            </div>
+            <h2 class="article-list-title">Pink</h2>
+            <div class="article-item" data-article-id="3">
+                <div class="article-item-title">Naslov članka</div>
+                <div class="article-item-meta">May 15, 2024 • 5 min read</div>
+            </div>
+            <h2 class="article-list-title">Informer</h2>
+            <div class="article-item" data-article-id="4">
+                <div class="article-item-title">Naslov članka</div>
                 <div class="article-item-meta">May 15, 2024 • 5 min read</div>
             </div>
         </div>
@@ -325,9 +340,9 @@
         <!-- Main Content Area -->
         <div class="main-content" id="mainContent">
             <div class="graph-container">
-                <h2 class="graph-title">Neo4j Graph Visualization</h2>
+                <h2 class="graph-title">Naslov izabranog članka</h2>
                 <div class="graph-placeholder" id="graphContainer">
-                    Neo4j Graph Visualization Will Appear Here
+                    Neo4j Graph Visualization Will Appear Here <br> (za ovo pogledati implementacije na github)
                 </div>
             </div>
         </div>
@@ -348,7 +363,40 @@
         // ===== Article Data =====
         const articles = {
             1: {
-                title: "Web Design Trends 2024",
+                title: "N1 naslov",
+                content: `
+                    <p>The digital landscape continues to evolve rapidly, with 2024 bringing exciting new trends to web design. Here are the key developments shaping online experiences this year:</p>
+
+                    <p><strong>1. AI-Powered Personalization</strong><br>
+                    Websites now adapt in real-time to user behavior, offering personalized layouts and content powered by machine learning algorithms.</p>
+                `,
+                date: "May 15, 2024",
+                readTime: "5 min read"
+            },
+            2: {
+                title: "Nova S",
+                content: `
+                    <p>The digital landscape continues to evolve rapidly, with 2024 bringing exciting new trends to web design. Here are the key developments shaping online experiences this year:</p>
+
+                    <p><strong>1. AI-Powered Personalization</strong><br>
+                    Websites now adapt in real-time to user behavior, offering personalized layouts and content powered by machine learning algorithms.</p>
+                `,
+                date: "May 15, 2024",
+                readTime: "5 min read"
+            },
+            3: {
+                title: "Pink naslov",
+                content: `
+                    <p>The digital landscape continues to evolve rapidly, with 2024 bringing exciting new trends to web design. Here are the key developments shaping online experiences this year:</p>
+
+                    <p><strong>1. AI-Powered Personalization</strong><br>
+                    Websites now adapt in real-time to user behavior, offering personalized layouts and content powered by machine learning algorithms.</p>
+                `,
+                date: "May 15, 2024",
+                readTime: "5 min read"
+            },
+            4: {
+                title: "Informer naslov",
                 content: `
                     <p>The digital landscape continues to evolve rapidly, with 2024 bringing exciting new trends to web design. Here are the key developments shaping online experiences this year:</p>
 
@@ -370,10 +418,18 @@
         const closeBtn = document.getElementById('closeBtn');
         const graphContainer = document.getElementById('graphContainer');
 
+        // ===== Global State =====
+        let currentOpenArticleId = null;
+
         // ===== Functions =====
         function openArticle(articleId) {
             const article = articles[articleId];
             if (!article) return;
+
+            // If clicking the same article that's already open, do nothing
+            if (currentOpenArticleId === articleId) {
+                return;
+            }
 
             // Update active state
             articleItems.forEach(item => {
@@ -387,21 +443,18 @@
                 ${article.content}
             `;
 
-            // Show window first
-            articleWindow.classList.add('visible');
-            appContainer.classList.add('article-visible');
+            // If no article is currently open, or we're opening a different one
+            if (!articleWindow.classList.contains('visible')) {
+                // Calculate dimensions before showing the window
+                const articleWidth = articleWindow.offsetWidth;
+                const sidebarWidth = document.querySelector('.article-list').offsetWidth;
+                const availableWidth = window.innerWidth - articleWidth - sidebarWidth;
 
-            // Calculate dimensions after window is visible
-            setTimeout(() => {
+                // Apply styles before animation starts
                 if (window.innerWidth >= 768) {
-                    const articleWidth = articleWindow.offsetWidth;
-                    const sidebarWidth = document.querySelector('.article-list').offsetWidth;
-                    const availableWidth = window.innerWidth - articleWidth - sidebarWidth;
-
-                    // Reset any previous transitions
-                    mainContent.style.transition = 'none';
-                    mainContent.style.width = `${mainContent.offsetWidth}px`;
+                    mainContent.style.width = `${mainContent.offsetWidth}px`; // Lock current width
                     mainContent.style.marginRight = '0';
+                    mainContent.style.transition = 'none';
 
                     // Force layout calculation
                     void mainContent.offsetWidth;
@@ -411,24 +464,32 @@
                     mainContent.style.width = `${availableWidth}px`;
                     mainContent.style.marginRight = `${articleWidth}px`;
                 } else {
-                    mainContent.style.transition = 'all var(--transition-normal) ease-out';
                     mainContent.style.transform = 'scale(0.85)';
                     mainContent.style.transformOrigin = 'left center';
                     mainContent.style.filter = 'brightness(0.8)';
                 }
-            }, 10);
+            }
+
+            // Show window after main content styles are set
+            articleWindow.classList.add('visible');
+            appContainer.classList.add('article-visible');
+            currentOpenArticleId = articleId;
         }
 
         function closeArticle() {
-            // Start closing animation
+            // If no article is open, do nothing
+            if (currentOpenArticleId === null) return;
+
             if (window.innerWidth >= 768) {
-                mainContent.style.transition = 'all var(--transition-normal) ease-out';
+                // Store current dimensions before closing
                 mainContent.style.width = `${mainContent.offsetWidth}px`;
                 mainContent.style.marginRight = `${articleWindow.offsetWidth}px`;
 
                 // Force layout calculation
                 void mainContent.offsetWidth;
 
+                // Start animation
+                mainContent.style.transition = 'all var(--transition-normal) ease-out';
                 mainContent.style.width = '';
                 mainContent.style.marginRight = '0';
             } else {
@@ -440,17 +501,12 @@
             articleWindow.classList.remove('visible');
             appContainer.classList.remove('article-visible');
 
-            // Reset styles after animation completes
-            mainContent.addEventListener('transitionend', function resetStyles() {
-                if (!articleWindow.classList.contains('visible')) {
-                    mainContent.style.width = '';
-                    mainContent.style.marginRight = '';
-                    mainContent.style.transition = '';
-                    mainContent.style.transform = '';
-                    mainContent.style.filter = '';
-                    mainContent.removeEventListener('transitionend', resetStyles);
-                }
-            }, { once: true });
+            // Remove active state from all articles
+            articleItems.forEach(item => {
+                item.classList.remove('active');
+            });
+
+            currentOpenArticleId = null;
         }
 
         function handleResize() {
