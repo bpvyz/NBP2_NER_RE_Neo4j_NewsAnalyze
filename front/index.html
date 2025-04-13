@@ -387,46 +387,48 @@
                 ${article.content}
             `;
 
-            // Calculate dimensions before showing the window
-            const articleWidth = articleWindow.offsetWidth;
-            const sidebarWidth = document.querySelector('.article-list').offsetWidth;
-            const availableWidth = window.innerWidth - articleWidth - sidebarWidth;
-
-            // Apply styles before animation starts
-            if (window.innerWidth >= 768) {
-                mainContent.style.width = `${mainContent.offsetWidth}px`; // Lock current width
-                mainContent.style.marginRight = '0';
-                mainContent.style.transition = 'none';
-
-                // Force layout calculation
-                void mainContent.offsetWidth;
-
-                // Start animation
-                mainContent.style.transition = 'all var(--transition-normal) ease-out';
-                mainContent.style.width = `${availableWidth}px`;
-                mainContent.style.marginRight = `${articleWidth}px`;
-            } else {
-                mainContent.style.transform = 'scale(0.85)';
-                mainContent.style.transformOrigin = 'left center';
-                mainContent.style.filter = 'brightness(0.8)';
-            }
-
-            // Show window after main content styles are set
+            // Show window first
             articleWindow.classList.add('visible');
             appContainer.classList.add('article-visible');
+
+            // Calculate dimensions after window is visible
+            setTimeout(() => {
+                if (window.innerWidth >= 768) {
+                    const articleWidth = articleWindow.offsetWidth;
+                    const sidebarWidth = document.querySelector('.article-list').offsetWidth;
+                    const availableWidth = window.innerWidth - articleWidth - sidebarWidth;
+
+                    // Reset any previous transitions
+                    mainContent.style.transition = 'none';
+                    mainContent.style.width = `${mainContent.offsetWidth}px`;
+                    mainContent.style.marginRight = '0';
+
+                    // Force layout calculation
+                    void mainContent.offsetWidth;
+
+                    // Start animation
+                    mainContent.style.transition = 'all var(--transition-normal) ease-out';
+                    mainContent.style.width = `${availableWidth}px`;
+                    mainContent.style.marginRight = `${articleWidth}px`;
+                } else {
+                    mainContent.style.transition = 'all var(--transition-normal) ease-out';
+                    mainContent.style.transform = 'scale(0.85)';
+                    mainContent.style.transformOrigin = 'left center';
+                    mainContent.style.filter = 'brightness(0.8)';
+                }
+            }, 10);
         }
 
         function closeArticle() {
+            // Start closing animation
             if (window.innerWidth >= 768) {
-                // Store current dimensions before closing
+                mainContent.style.transition = 'all var(--transition-normal) ease-out';
                 mainContent.style.width = `${mainContent.offsetWidth}px`;
                 mainContent.style.marginRight = `${articleWindow.offsetWidth}px`;
 
                 // Force layout calculation
                 void mainContent.offsetWidth;
 
-                // Start animation
-                mainContent.style.transition = 'all var(--transition-normal) ease-out';
                 mainContent.style.width = '';
                 mainContent.style.marginRight = '0';
             } else {
@@ -437,6 +439,18 @@
             // Hide window after main content styles are set
             articleWindow.classList.remove('visible');
             appContainer.classList.remove('article-visible');
+
+            // Reset styles after animation completes
+            mainContent.addEventListener('transitionend', function resetStyles() {
+                if (!articleWindow.classList.contains('visible')) {
+                    mainContent.style.width = '';
+                    mainContent.style.marginRight = '';
+                    mainContent.style.transition = '';
+                    mainContent.style.transform = '';
+                    mainContent.style.filter = '';
+                    mainContent.removeEventListener('transitionend', resetStyles);
+                }
+            }, { once: true });
         }
 
         function handleResize() {
