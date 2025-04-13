@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Article Browser with Neo4j</title>
+    <style>
+        /* ===== Variables ===== */
+        :root {
+            /* Colors */
+            --primary-color: #0071e3;
+            --primary-hover: #0077ed;
+            --text-dark: #1d1d1f;
+            --text-medium: #333;
+            --text-light: #86868b;
+            --border-color: #e0e0e0;
+            --bg-color: #f5f5f7;
+            --card-bg: #ffffff;
+
+            /* Spacing */
+            --spacing-sm: 8px;
+            --spacing-md: 16px;
+            --spacing-lg: 24px;
+
+            /* Transitions */
+            --transition-fast: 0.2s;
+            --transition-normal: 0.3s;
+        }
+
+        /* ===== Base Styles ===== */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html, body {
+            height: 100%;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-dark);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* ===== Layout Structure ===== */
+        .app-container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Article List Styles */
+        .article-list {
+            width: 300px;
+            background-color: var(--card-bg);
+            border-right: 1px solid var(--border-color);
+            overflow-y: auto;
+            padding: var(--spacing-md);
+            flex-shrink: 0;
+        }
+
+        .article-list-title {
+            font-size: 1.2rem;
+            margin-bottom: var(--spacing-md);
+            padding-bottom: var(--spacing-sm);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        /* Main Content Area */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: var(--spacing-lg);
+            transition: all var(--transition-normal) ease-out;
+            will-change: transform, width, margin-right;
+        }
+
+        /* Graph Container */
+        .graph-container {
+            width: 100%;
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            padding: var(--spacing-lg);
+            min-height: 400px;
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            margin-bottom: var(--spacing-lg);
+            transition: all var(--transition-normal) ease-out;
+            flex: 1;
+        }
+
+        .graph-title {
+            margin-bottom: var(--spacing-md);
+            font-size: 1.5rem;
+        }
+
+        .graph-placeholder {
+            flex: 1;
+            background-color: #fafafa;
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: var(--text-light);
+            font-size: 1.1rem;
+            border: 2px dashed var(--border-color);
+            padding: var(--spacing-lg);
+            text-align: center;
+            transition: all var(--transition-normal) ease-out;
+        }
+
+        /* Article Window */
+        .article-window {
+            position: fixed;
+            top: 0;
+            right: -800px;
+            width: 400px;
+            height: 100vh;
+            background-color: var(--card-bg);
+            box-shadow: -5px 0 30px rgba(0, 0, 0, 0.15);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            z-index: 100;
+            border-left: 1px solid var(--border-color);
+            transition: right var(--transition-normal) ease-out;
+            will-change: right;
+        }
+
+        .article-window.visible {
+            right: 0;
+        }
+
+        .article-header {
+            padding: var(--spacing-md) var(--spacing-lg);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #fafafa;
+        }
+
+        .article-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--text-light);
+            padding: var(--spacing-sm);
+            transition: color var(--transition-fast);
+        }
+
+        .close-btn:hover {
+            color: var(--text-dark);
+        }
+
+        .article-content {
+            padding: var(--spacing-lg);
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .article-content p {
+            margin-bottom: 1rem;
+            font-size: 1rem;
+            color: var(--text-medium);
+        }
+
+        .article-content strong {
+            color: var(--text-dark);
+        }
+
+        /* Article Items */
+        .article-item {
+            padding: var(--spacing-md) var(--spacing-md);
+            margin-bottom: var(--spacing-sm);
+            background-color: #fafafa;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            border-left: 3px solid transparent;
+        }
+
+        .article-item:hover {
+            background-color: #f0f0f0;
+            border-left: 3px solid var(--primary-color);
+        }
+
+        .article-item.active {
+            background-color: #e6f0fa;
+            border-left: 3px solid var(--primary-color);
+        }
+
+        .article-item-title {
+            font-weight: 500;
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .article-item-meta {
+            font-size: 0.8rem;
+            color: var(--text-light);
+        }
+
+        /* ===== Animation Classes ===== */
+        .app-container.article-visible {
+            position: relative;
+        }
+
+        @media (min-width: 768px) {
+            .app-container.article-visible .main-content {
+                transition: all var(--transition-normal) ease-out;
+            }
+        }
+
+        /* ===== Responsive Styles ===== */
+        @media (max-width: 1200px) {
+            .article-window {
+                width: 600px;
+            }
+        }
+
+        @media (max-width: 992px) {
+            .app-container {
+                flex-direction: column;
+            }
+
+            .article-list {
+                width: 100%;
+                border-right: none;
+                border-bottom: 1px solid var(--border-color);
+                max-height: 200px;
+            }
+
+            .graph-container {
+                min-height: 300px;
+            }
+
+            .article-window {
+                width: 500px;
+            }
+        }
+
+        @media (max-width: 767px) {
+            .main-content {
+                padding: var(--spacing-md);
+            }
+
+            .article-window {
+                width: 100%;
+                border-left: none;
+            }
+
+            .app-container.article-visible .main-content {
+                transform: scale(0.85);
+                transform-origin: left center;
+                width: 100% !important;
+                margin-right: 0 !important;
+            }
+
+            .article-window.visible {
+                width: 100%;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .main-content {
+                padding: var(--spacing-sm);
+            }
+
+            .graph-container {
+                padding: var(--spacing-md);
+            }
+
+            .article-header {
+                padding: var(--spacing-sm) var(--spacing-md);
+            }
+
+            .article-content {
+                padding: var(--spacing-md);
+            }
+        }
+
+        @media (max-width: 1500px) {
+            .article-window {
+                width: 500px;
+            }
+        }
+
+        @media (min-width: 1500px) {
+            .article-window {
+                width: 500px;
+            }
+        }
+
+        /* Fix for ultra-wide screens */
+        @media (min-width: 1800px) {
+            .article-window {
+                max-width: 800px; /* Cap maximum width */
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container" id="appContainer">
+        <!-- Article List Sidebar -->
+        <div class="article-list">
+            <h2 class="article-list-title">Recent Articles</h2>
+            <div class="article-item" data-article-id="1">
+                <div class="article-item-title">Web Design Trends 2024</div>
+                <div class="article-item-meta">May 15, 2024 • 5 min read</div>
+            </div>
+        </div>
+
+        <!-- Main Content Area -->
+        <div class="main-content" id="mainContent">
+            <div class="graph-container">
+                <h2 class="graph-title">Neo4j Graph Visualization</h2>
+                <div class="graph-placeholder" id="graphContainer">
+                    Neo4j Graph Visualization Will Appear Here
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Article Window -->
+    <div class="article-window" id="articleWindow">
+        <div class="article-header" id="articleHeader">
+            <h2 class="article-title" id="articleWindowTitle">Article Title</h2>
+            <button class="close-btn" id="closeBtn">×</button>
+        </div>
+        <div class="article-content" id="articleWindowContent">
+            <!-- Content will be loaded here -->
+        </div>
+    </div>
+
+    <script>
+        // ===== Article Data =====
+        const articles = {
+            1: {
+                title: "Web Design Trends 2024",
+                content: `
+                    <p>The digital landscape continues to evolve rapidly, with 2024 bringing exciting new trends to web design. Here are the key developments shaping online experiences this year:</p>
+
+                    <p><strong>1. AI-Powered Personalization</strong><br>
+                    Websites now adapt in real-time to user behavior, offering personalized layouts and content powered by machine learning algorithms.</p>
+                `,
+                date: "May 15, 2024",
+                readTime: "5 min read"
+            }
+        };
+
+        // ===== DOM Elements =====
+        const appContainer = document.getElementById('appContainer');
+        const mainContent = document.getElementById('mainContent');
+        const articleItems = document.querySelectorAll('.article-item');
+        const articleWindow = document.getElementById('articleWindow');
+        const articleWindowTitle = document.getElementById('articleWindowTitle');
+        const articleWindowContent = document.getElementById('articleWindowContent');
+        const closeBtn = document.getElementById('closeBtn');
+        const graphContainer = document.getElementById('graphContainer');
+
+        // ===== Functions =====
+        function openArticle(articleId) {
+            const article = articles[articleId];
+            if (!article) return;
+
+            // Update active state
+            articleItems.forEach(item => {
+                item.classList.toggle('active', item.dataset.articleId === articleId);
+            });
+
+            // Set article content
+            articleWindowTitle.textContent = article.title;
+            articleWindowContent.innerHTML = `
+                <p><small>${article.date} • ${article.readTime}</small></p>
+                ${article.content}
+            `;
+
+            // Calculate dimensions before showing the window
+            const articleWidth = articleWindow.offsetWidth;
+            const sidebarWidth = document.querySelector('.article-list').offsetWidth;
+            const availableWidth = window.innerWidth - articleWidth - sidebarWidth;
+
+            // Apply styles before animation starts
+            if (window.innerWidth >= 768) {
+                mainContent.style.width = `${mainContent.offsetWidth}px`; // Lock current width
+                mainContent.style.marginRight = '0';
+                mainContent.style.transition = 'none';
+
+                // Force layout calculation
+                void mainContent.offsetWidth;
+
+                // Start animation
+                mainContent.style.transition = 'all var(--transition-normal) ease-out';
+                mainContent.style.width = `${availableWidth}px`;
+                mainContent.style.marginRight = `${articleWidth}px`;
+            } else {
+                mainContent.style.transform = 'scale(0.85)';
+                mainContent.style.transformOrigin = 'left center';
+                mainContent.style.filter = 'brightness(0.8)';
+            }
+
+            // Show window after main content styles are set
+            articleWindow.classList.add('visible');
+            appContainer.classList.add('article-visible');
+        }
+
+        function closeArticle() {
+            if (window.innerWidth >= 768) {
+                // Store current dimensions before closing
+                mainContent.style.width = `${mainContent.offsetWidth}px`;
+                mainContent.style.marginRight = `${articleWindow.offsetWidth}px`;
+
+                // Force layout calculation
+                void mainContent.offsetWidth;
+
+                // Start animation
+                mainContent.style.transition = 'all var(--transition-normal) ease-out';
+                mainContent.style.width = '';
+                mainContent.style.marginRight = '0';
+            } else {
+                mainContent.style.transform = '';
+                mainContent.style.filter = '';
+            }
+
+            // Hide window after main content styles are set
+            articleWindow.classList.remove('visible');
+            appContainer.classList.remove('article-visible');
+        }
+
+        function handleResize() {
+            if (articleWindow.classList.contains('visible')) {
+                mainContent.style.filter = window.innerWidth >= 768 ? '' : 'brightness(0.8)';
+            }
+        }
+
+        function resizeGraphContainer() {
+            const graphContainer = document.getElementById('graphContainer');
+            if (!graphContainer) return;
+
+            // Force browser to recalculate layout for the graph
+            setTimeout(() => {
+                window.dispatchEvent(new Event('resize'));
+            }, 300);
+        }
+
+        // ===== Event Listeners =====
+        articleItems.forEach(item => {
+            item.addEventListener('click', () => {
+                openArticle(item.dataset.articleId);
+            });
+        });
+
+        closeBtn.addEventListener('click', closeArticle);
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeArticle();
+            }
+        });
+
+        window.addEventListener('resize', () => {
+            handleResize();
+            resizeGraphContainer();
+        });
+
+        // Handle transitions when CSS animation completes
+        articleWindow.addEventListener('transitionend', resizeGraphContainer);
+
+        mainContent.addEventListener('transitionend', () => {
+            if (!articleWindow.classList.contains('visible')) {
+                // Reset styles after closing animation completes
+                mainContent.style.width = '';
+                mainContent.style.marginRight = '';
+                mainContent.style.transition = '';
+            }
+        });
+
+        // Initialize layout on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            // This would be where you initialize your Neo4j visualization
+            // For example:
+            /*
+            const config = {
+                containerId: "graphContainer",
+                neo4j: {
+                    serverUrl: "bolt://localhost:7687",
+                    serverUser: "neo4j",
+                    serverPassword: "password"
+                },
+                // Other Neo4j visualization configuration...
+            };
+
+            // Initialize visualization (commented out as this is just a placeholder)
+            // window.neoVis = new NeoVis.default(config);
+            // window.neoVis.render();
+            */
+
+            console.log("Article Browser with Neo4j initialized");
+        });
+    </script>
+</body>
+</html>
