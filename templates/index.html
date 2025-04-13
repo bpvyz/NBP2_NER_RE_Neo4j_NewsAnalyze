@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="{{url_for('static', filename='css/style.css')}}">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Article Browser with Neo4j</title>
+</head>
+<body>
+    <div class="app-container" id="appContainer">
+        <!-- Article List Sidebar -->
+        <div class="article-list scrollable-list">
+            {% for group in groups %}
+            <div class="bias-group">
+                <div class="bias-group-header collapsible" data-target="bias-{{ group.id }}">
+                    <h2>{{ group.name }}</h2>
+                    <span class="collapse-icon">+</span>
+                </div>
+                <div class="bias-group-content" id="bias-{{ group.id }}">
+                    {% for source in group.sources %}
+                    <div class="source-group">
+                        <div class="source-group-header collapsible" data-target="source-{{ source.id }}">
+                            <h3>{{ source.name }}</h3>
+                            <span class="collapse-icon">+</span>
+                        </div>
+                        <div class="source-group-content" id="source-{{ source.id }}">
+                            {% for article in source.articles %}
+                            <div class="article-item" data-article-id="{{ article.id }}">
+                                <div class="article-item-title">{{ article.title }}</div>
+                                <div class="article-item-meta">
+                                    <a href="{{ article.url }}" target="_blank">Otvori članak</a>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Main Content Area -->
+        <div class="main-content" id="mainContent">
+            <div class="graph-container">
+                <div class="graph-placeholder" id="graphContainer">
+                    <div class="loading-spinner"></div>
+                    <p>Loading graph visualization...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Article Window -->
+    <div class="article-window" id="articleWindow">
+        <div class="article-header" id="articleHeader">
+            <h2 class="article-title" id="articleWindowTitle">Article Title</h2>
+            <div class="article-window-source" id="articleWindowSource">
+                <a id="articleSourceValue" href="/">Unknown</a>
+            </div>
+            <button class="close-btn" id="closeBtn">×</button>
+        </div>
+        <div class="article-content" id="articleWindowContent">
+            <!-- Content will be loaded here -->
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/neovis.js@2.0.0/dist/neovis.js"></script>
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>

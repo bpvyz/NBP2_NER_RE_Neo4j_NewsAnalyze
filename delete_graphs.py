@@ -4,9 +4,9 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-URI = "bolt://localhost:7687"
-USER = "neo4j"
-PASSWORD = os.getenv("NEO4J_KEY")
+URI = os.getenv('NEO4J_URI')
+USER = os.getenv("NEO4J_USER")
+PASSWORD = os.getenv("NEO4J_PASSWORD")
 
 
 def delete_all_data(uri, user, password):

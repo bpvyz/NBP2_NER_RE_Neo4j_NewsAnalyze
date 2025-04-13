@@ -6,9 +6,9 @@ from rapidfuzz import fuzz
 
 load_dotenv()
 
-URI = "bolt://localhost:7687"
-USER = "neo4j"
-PASSWORD = os.getenv("NEO4J_KEY")
+URI = os.getenv("NEO4J_URI")
+USER = os.getenv("NEO4J_USER")
+PASSWORD = os.getenv("NEO4J_PASSWORD")
 
 
 class ArticleGraph:
@@ -196,12 +196,12 @@ class ArticleGraph:
                    title: $title,
                    url: $url,
                    source: $source,
-                   bias: $bias
+                   bias: $bias,
+                   text: $text
                })
                RETURN a
            """, title=article["article_title"], url=article["article_url"],
-               source=article["article_source"], bias=article["article_bias"])
-
+               source=article["article_source"], bias=article["article_bias"], text=article["article_text"])
         print(f"Created/Found article node: '{article['article_title']}'")
 
         # Process entities
