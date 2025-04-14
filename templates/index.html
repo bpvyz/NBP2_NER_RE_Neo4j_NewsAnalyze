@@ -4,6 +4,16 @@
     <link rel="stylesheet" href="{{url_for('static', filename='css/style.css')}}">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/sigma.js/1.2.1/sigma.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sigma.js/1.2.1/sigma.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sigma.js/1.2.1/plugins/sigma.layout.forceAtlas2.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sigma.js/1.2.1/plugins/sigma.parsers.json.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sigma.js/1.2.1/plugins/sigma.plugins.animate.min.js"></script>
+    <script src="{{ url_for('static', filename='js/plugins/sigma.renderers.edgeLabels/settings.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/plugins/sigma.renderers.edgeLabels/sigma.canvas.edges.labels.def.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/plugins/sigma.renderers.edgeLabels/sigma.canvas.edges.labels.curve.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/plugins/sigma.renderers.edgeLabels/sigma.canvas.edges.labels.curvedArrow.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/plugins/sigma.plugins.dragNodes/sigma.plugins.dragNodes.js') }}"></script>
     <title>Article Browser with Neo4j</title>
 </head>
 <body>
@@ -43,10 +53,17 @@
         <!-- Main Content Area -->
         <div class="main-content" id="mainContent">
             <div class="graph-container">
-                <div class="graph-placeholder" id="graphContainer">
-                    <div class="loading-spinner"></div>
-                    <p>Loading graph visualization...</p>
-                </div>
+                <!-- This div will be used by Sigma.js -->
+                <div id="sigma-container"></div>
+
+                <!-- These elements will persist -->
+                <div class="loading-spinner"></div>
+                <p class="loading-text">Loading graph visualization...</p>
+                <button class="fullscreen-btn" id="fullscreenBtn" title="Toggle Fullscreen">
+                    <svg viewBox="0 0 24 24" width="24" height="24">
+                        <path fill="currentColor" d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>
+                    </svg>
+                </button>
             </div>
         </div>
     </div>
@@ -65,7 +82,6 @@
         </div>
     </div>
 
-    <script src="https://unpkg.com/neovis.js@2.0.0/dist/neovis.js"></script>
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
 </body>
 </html>

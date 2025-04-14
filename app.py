@@ -104,6 +104,7 @@ def index():
         app.logger.error(f"Error in index route: {str(e)}")
         return render_template("error.html", message="Error loading articles"), 500
 
+
 @app.route("/api/graph/<article_id>")
 @handle_neo4j_exceptions
 def get_article_graph(article_id):
@@ -113,18 +114,27 @@ def get_article_graph(article_id):
     with driver.session() as session:
         query = """
         MATCH (a:Article)
-        WHERE elementId(a) = $article_id OR id(a) = toInteger($article_id)
-        OPTIONAL MATCH (a)-[r]-(connected)
-        WHERE any(label IN labels(connected) WHERE label IN $entity_labels)
-        RETURN a, r, connected
+        WHERE elementId(a) = $article_id
+        
+        // Nađi sve čvorove povezane sa člankom kroz usmerene veze
+        OPTIONAL MATCH (a)-[r]->(connected)
+        
+        // Dodatno, nađi sve usmerene veze između povezanih čvorova
+        OPTIONAL MATCH (connected)-[r2]->(other_connected)
+        WHERE r2.article = a.title
+        
+        RETURN a, r, connected, r2, other_connected
         """
-        result = session.run(query, article_id=article_id, entity_labels=ENTITY_LABELS)
+        result = session.run(query, article_id=article_id)
 
         nodes = []
         edges = []
         node_ids = set()
 
+
+
         for record in result:
+            # Add article node
             a = record["a"]
             if a.element_id not in node_ids:
                 nodes.append({
@@ -147,7 +157,7 @@ def get_article_graph(article_id):
                 node_ids.add(connected.element_id)
 
             rel = record["r"]
-            if rel:
+            if rel.type:
                 edges.append({
                     "from": a.element_id,
                     "to": connected.element_id,
@@ -155,7 +165,29 @@ def get_article_graph(article_id):
                     "properties": dict(rel)
                 })
 
+            # Additional logic for edges between connected nodes
+            connected2 = record["other_connected"]
+            rel2 = record["r2"]
+            if connected2 and connected2.element_id not in node_ids:
+                nodes.append({
+                    "id": connected2.element_id,
+                    "label": connected2.get("name", connected2.get("title", f"{connected2.element_id}")),
+                    "group": next(iter(connected2.labels), "Entity").lower(),
+                    "properties": dict(connected2)
+                })
+                node_ids.add(connected2.element_id)
+
+            if rel2:
+                edges.append({
+                    "from": connected.element_id,
+                    "to": connected2.element_id,
+                    "label": rel2.type,
+                    "properties": dict(rel2)
+                })
+        # for rel in edges:
+        #     print(rel["from"], rel["to"], rel["label"], rel["properties"])
         return jsonify({"nodes": nodes, "edges": edges})
+
 
 @app.route("/api/article/<article_id>")
 @handle_neo4j_exceptions
@@ -166,7 +198,7 @@ def get_article_content(article_id):
     with driver.session() as session:
         query = """
         MATCH (a:Article)
-        WHERE elementId(a) = $article_id OR id(a) = toInteger($article_id)
+        WHERE elementId(a) = $article_id OR elementId(a) = toInteger($article_id)
         RETURN a
         """
         result = session.run(query, article_id=article_id).single()
