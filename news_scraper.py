@@ -5,8 +5,6 @@ import json
 import time
 import os
 import re
-from scraping_rules import SCRAPING_RULES
-from sources import SOURCES
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from colorama import Fore, init
 import threading
@@ -14,6 +12,12 @@ import threading
 init(autoreset=True)
 
 print_lock = threading.Lock()
+
+with open('sources.json', 'r', encoding='utf-8') as f:
+    SOURCES = json.load(f)
+
+with open('scraping_rules.json', 'r', encoding='utf-8') as f:
+    SCRAPING_RULES = json.load(f)
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
@@ -139,7 +143,7 @@ def scrape_news_site(base_url, site_name, bias):
 
     return articles
 
-def save_to_json(data, filename="example_output/serbian_news_articles.json"):
+def save_to_json(data, filename="data/serbian_news_articles.json"):
     os.makedirs(os.path.dirname(filename), exist_ok=True)
     with open(filename, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, indent=2)

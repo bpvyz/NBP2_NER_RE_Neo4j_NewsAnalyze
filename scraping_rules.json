@@ -1,21 +1,21 @@
-SCRAPING_RULES = {
+{
     "informer.rs": {
         "section1": {
-            "subsections": False,
+            "subsections": false,
             "main_container": "div.new-lead-box-news",
-            "container": "article.news-item",  # Update based on actual HTML inspection
+            "container": "article.news-item",
             "link": "a[href]",
             "title": "h2.news-item-title",
-            "full_text_container": "div.single-news-content",  # Container for article body
-            "scrape_all_p": False
+            "full_text_container": "div.single-news-content",
+            "scrape_all_p": false
         },
         "section2": {
-            "subsections": True,
-            "container": "article.news-item",  # Update based on actual HTML inspection
+            "subsections": true,
+            "container": "article.news-item",
             "link": "a[href]",
             "title": "h2.news-item-title",
-            "full_text_container": "div.single-news-content",  # Container for article body
-            "scrape_all_p": False
+            "full_text_container": "div.single-news-content",
+            "scrape_all_p": false
         }
     },
     "nova.rs": {
@@ -23,8 +23,8 @@ SCRAPING_RULES = {
             "container": "div.uc-post-title",
             "link": "a[href]",
             "title": "a",
-            "full_text_container": "div.post",  # Container for article body
-            "scrape_all_p": True
+            "full_text_container": "div.post",
+            "scrape_all_p": true
         }
     },
     "n1info.rs": {
@@ -32,8 +32,8 @@ SCRAPING_RULES = {
             "container": "article.post",
             "link": "a[href]",
             "title": "a.uc-block-post-grid-title-link",
-            "full_text_container": "div.entry-content",  # Container for article body
-            "scrape_all_p": True
+            "full_text_container": "div.entry-content",
+            "scrape_all_p": true
         }
     },
     "pink.rs": {
@@ -42,21 +42,21 @@ SCRAPING_RULES = {
             "link": "a[href]",
             "title": "div.featured-title",
             "full_text_container": "div.news-single-content",
-            "scrape_all_p": True
+            "scrape_all_p": true
         },
         "section2": {
             "container": "div.news-double",
             "link": "a[href]",
             "title": "div.item-title > h2",
             "full_text_container": "div.news-single-content",
-            "scrape_all_p": True
+            "scrape_all_p": true
         },
         "section3": {
             "container": "div.news-item",
             "link": "a[href]",
             "title": "div.item-title > h2",
             "full_text_container": "div.news-single-content",
-            "scrape_all_p": True
+            "scrape_all_p": true
         }
     }
 }

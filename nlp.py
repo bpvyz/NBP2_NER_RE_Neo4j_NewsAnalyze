@@ -5,6 +5,12 @@ import asyncio
 from openai import AsyncOpenAI
 import time
 from tqdm.asyncio import tqdm_asyncio
+from dotenv import load_dotenv
+from colorama import Fore, init
+
+load_dotenv()
+
+init(autoreset=True)
 
 # Inicijalizacija asinhronog klijenta
 client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
@@ -15,7 +21,7 @@ with open("example_output/serbian_news_articles.json", "r", encoding="utf-8") as
 
 async def extract_entities_and_relations(text):
     prompt = f"""
-    Izvuci entitete (osobe, organizacije, lokacije, grupe, aktivnosti, itd.) i deskriptivne relacije (događaji, akcije, interakcije) iz sledećeg teksta vesti, 
+    Izvuci entitete (Osoba, Organizacija, Lokacija, Vreme, Aktivnost, AktivnostDogađaj, Događaj, Grupa, Vozilo, Proizvod, Umetničko delo, Dokument, Biljka, Broj, Hrana, Piće, Institucija, Simbol, HranaPiće, Životinja, Tehnologija) i deskriptivne relacije (događaji, akcije, interakcije) iz sledećeg teksta vesti, 
     koristeći odgovarajuće tipove za Neo4j. Relacije treba da budu konkretne, jasno definisane između entiteta, dok entiteti treba da budu označeni sa odgovarajućim labelama 
     (npr. Osoba, Organizacija, Lokacija, Vreme, Aktivnost/Događaj, Vozilo, Proizvod, Umetničko delo, Dokument, Hrana/Piće, Životinja, Biljka, Tehnologija, itd.).
 
@@ -27,8 +33,8 @@ async def extract_entities_and_relations(text):
     Relacije: [entitet1 -[:relation]-> entitet2, entitet3 -[:relation]-> entitet4]
 
     Bez uvodnih fraza, samo entiteti i relacije, tačno u ovom formatu.
-    Za svaki entitet formirati odgovarajucu relaciju.
-    Za svaki entitet koji ucestvuje u relaciji formirati odgovarajuci label.
+    Za svaki entitet formirati odgovarajuću relaciju.
+    Za svaki entitet koji učestvuje u relaciji formirati odgovarajući label.
     Svi entiteti i sve relacije moraju biti isključivo na srpskom jeziku. Nije dozvoljeno koristiti engleske, hrvatske ili strane nazive.
     Na primer, 'European Union' treba biti 'Evropska unija', 'Germany' treba biti 'Nemačka', 'Croatian police' treba biti 'hrvatska policija'.
     """
@@ -82,11 +88,11 @@ async def process_articles():
 
     results = [r for r in results if r]
 
-    with open("entities_and_relations.json", "w", encoding="utf-8") as outfile:
+    with open("data/entities_and_relations.json", "w", encoding="utf-8") as outfile:
         json.dump(results, outfile, ensure_ascii=False, indent=4)
 
 if __name__ == "__main__":
     start_time = time.time()
     asyncio.run(process_articles())
     elapsed_time = time.time() - start_time
-    print(f"\n⏱ Total analyzing time: {elapsed_time:.2f} seconds")
+    print(Fore.YELLOW + f"\n⏱ Total analyzing time: {elapsed_time:.2f} seconds")

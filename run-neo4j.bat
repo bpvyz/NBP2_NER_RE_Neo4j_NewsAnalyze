@@ -39,11 +39,19 @@ if "!neo4j_pass:~0,8!"=="!neo4j_pass!" (
     goto get_password
 )
 
+:get_openai_key
+set /p "openai_key=Enter your OpenAI API key (required): "
+if "!openai_key!"=="" (
+    echo OpenAI API key is required for NLP processing
+    goto get_openai_key
+)
+
 :: Create .env file
 (
     echo NEO4J_URI=bolt://localhost:7687
     echo NEO4J_USER=!neo4j_user!
     echo NEO4J_PASSWORD=!neo4j_pass!
+    echo OPENAI_API_KEY=!openai_key!
 ) > .env
 
 echo Created .env file with your credentials
@@ -64,6 +72,7 @@ if %errorlevel% equ 0 (
     echo Username: !neo4j_user!
     echo Password: ******** (hidden for security)
     echo.
+    echo NOTE: Your OpenAI API key has been saved to .env
     echo You can now close this window.
     timeout /t 15 >nul
 ) else (
