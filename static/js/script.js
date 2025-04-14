@@ -139,7 +139,7 @@ function renderGraph(graphData) {
     }
 
     // Hide loading elements
-    document.querySelector('.loading-spinner').style.display = 'none';
+    // document.querySelector('.loading-spinner').style.display = 'none';
     document.querySelector('.loading-text').style.display = 'none';
 
     if (!graphData.nodes || !graphData.nodes.length) {
