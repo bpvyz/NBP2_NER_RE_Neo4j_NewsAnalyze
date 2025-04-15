@@ -16,7 +16,7 @@ init(autoreset=True)
 client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # Učitaj vesti iz JSON fajla
-with open("example_output/serbian_news_articles.json", "r", encoding="utf-8") as f:
+with open("data/serbian_news_articles.json", "r", encoding="utf-8") as f:
     news_data = json.load(f)
 
 async def extract_entities_and_relations(text):

@@ -242,7 +242,7 @@ class ArticleGraph:
 
 # Load data and process
 try:
-    with open("entities_and_relations.json", encoding="utf-8") as f:
+    with open("data/entities_and_relations.json", encoding="utf-8") as f:
         article_data = json.load(f)
 
     graph = ArticleGraph(URI, USER, PASSWORD)
