@@ -37,6 +37,7 @@ async def extract_entities_and_relations(text):
     Za svaki entitet koji učestvuje u relaciji formirati odgovarajući label.
     Svi entiteti i sve relacije moraju biti isključivo na srpskom jeziku. Nije dozvoljeno koristiti engleske, hrvatske ili strane nazive.
     Na primer, 'European Union' treba biti 'Evropska unija', 'Germany' treba biti 'Nemačka', 'Croatian police' treba biti 'hrvatska policija'.
+    Nije dozvoljeno koristiti generičku labelu "Entity". Svaki entitet mora imati konkretnu i tačnu labelu iz gore navedene liste.
     """
 
     response = await client.chat.completions.create(
@@ -69,7 +70,9 @@ async def process_article(article):
             "article_text": text,
             "entities_and_relations": entities_and_relations,
             "entities": entities,
-            "relations": relations
+            "entity_count": len(entities.split(", ")),
+            "relations": relations,
+            "relations_count": len(relations.split(", "))
         }
 
     except Exception as e:

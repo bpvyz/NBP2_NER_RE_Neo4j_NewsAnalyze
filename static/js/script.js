@@ -241,12 +241,14 @@ function renderGraph(graphData) {
         createTooltipSystem(currentState.graphInstance);
 
         // Apply ForceAtlas2 layout algorithm
+        // https://graphology.github.io/standard-library/layout-forceatlas2.html
         currentState.graphInstance.startForceAtlas2({
-            worker: true,
-            barnesHutOptimize: true,
-            slowDown: 10,
-            gravity: 1,
-            scalingRatio: 10
+            // worker: true,
+            barnesHutOptimize: false, // za manje od 100 cvorova nije potreban
+            slowDown: 100,
+            gravity: 10,
+            scalingRatio: 4,
+            strongGravitMode: true
         });
 
         // Stop layout algorithm after a few seconds for better performance
@@ -254,7 +256,7 @@ function renderGraph(graphData) {
             if (currentState.graphInstance) {
                 currentState.graphInstance.stopForceAtlas2();
             }
-        }, 3000);
+        }, 100); // Povecanje timeout-a cini graph vise preglednijim ali sporijim
 
     } catch (error) {
         console.error("Error rendering graph:", error);

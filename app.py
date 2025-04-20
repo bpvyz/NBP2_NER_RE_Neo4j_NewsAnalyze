@@ -125,17 +125,11 @@ def get_article_graph(article_id):
 
     with driver.session() as session:
         query = """
-        MATCH (a:Article)
+        MATCH (a:Article)-[r]->(connected)
         WHERE elementId(a) = $article_id
-        
-        // Nađi sve čvorove povezane sa člankom kroz usmerene veze
-        OPTIONAL MATCH (a)-[r]->(connected)
-        
-        // Dodatno, nađi sve usmerene veze između povezanih čvorova
         OPTIONAL MATCH (connected)-[r2]->(other_connected)
         WHERE r2.article = a.title
-        
-        RETURN a, r, connected, r2, other_connected
+        RETURN r, connected, r2, other_connected
         """
         result = session.run(query, article_id=article_id)
 
@@ -143,20 +137,10 @@ def get_article_graph(article_id):
         edges = []
         node_ids = set()
 
-
+        print(f"Query executed for article_id: {article_id}")  # Add debug log
 
         for record in result:
-            # Add article node
-            a = record["a"]
-            if a.element_id not in node_ids:
-                nodes.append({
-                    "id": a.element_id,
-                    "label": a.get("title", f"Article {a.element_id}"),
-                    "group": "article",
-                    "properties": dict(a)
-                })
-                node_ids.add(a.element_id)
-
+            # Skip adding the article node (a) to the graph nodes
             connected = record["connected"]
             if connected and connected.element_id not in node_ids:
                 node_type = next(iter(connected.labels), "Entity").lower()
@@ -168,18 +152,18 @@ def get_article_graph(article_id):
                 })
                 node_ids.add(connected.element_id)
 
+            # Add edges only for connected nodes, excluding the article node
             rel = record["r"]
-            if rel.type:
+            if rel.type and connected:
                 edges.append({
-                    "from": a.element_id,
-                    "to": connected.element_id,
+                    "from": connected.element_id,  # Start node of the edge
+                    "to": record["connected"].element_id,  # End node of the edge
                     "label": rel.type,
                     "properties": dict(rel)
                 })
 
             # Additional logic for edges between connected nodes
             connected2 = record["other_connected"]
-            rel2 = record["r2"]
             if connected2 and connected2.element_id not in node_ids:
                 nodes.append({
                     "id": connected2.element_id,
@@ -189,13 +173,14 @@ def get_article_graph(article_id):
                 })
                 node_ids.add(connected2.element_id)
 
-            if rel2:
+            if record["r2"]:
                 edges.append({
                     "from": connected.element_id,
                     "to": connected2.element_id,
-                    "label": rel2.type,
-                    "properties": dict(rel2)
+                    "label": record["r2"].type,
+                    "properties": dict(record["r2"])
                 })
+
         # for rel in edges:
         #     print(rel["from"], rel["to"], rel["label"], rel["properties"])
         return jsonify({"nodes": nodes, "edges": edges})
