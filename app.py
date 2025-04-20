@@ -1,4 +1,5 @@
-from flask import Flask, render_template, jsonify, request
+from flask import Flask, render_template, jsonify
+from flask_assets import Environment, Bundle
 from neo4j import GraphDatabase
 from dotenv import load_dotenv
 import os
@@ -7,6 +8,17 @@ from functools import wraps
 load_dotenv()
 
 app = Flask(__name__)
+
+assets = Environment(app)
+
+scss_bundle = Bundle(
+    'scss/main.scss',
+    filters='libsass,cssmin',
+    output='css/main.min.css',
+    depends='scss/**/*.scss'
+)
+
+assets.register('scss_all', scss_bundle)
 
 # Configuration
 class Config:

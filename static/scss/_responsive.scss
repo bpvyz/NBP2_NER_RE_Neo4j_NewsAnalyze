@@ -1,0 +1,84 @@
+@include respond-to(xl) {
+  .article-window {
+    width: 600px;
+  }
+}
+
+@include respond-to(lg) {
+  .app-container {
+    flex-direction: column;
+  }
+
+  .article-list {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid $border-color;
+    max-height: 200px;
+  }
+
+  .graph-container {
+    min-height: 300px;
+  }
+
+  .article-window {
+    width: 500px;
+  }
+}
+
+@include respond-to(md) {
+  .main-content {
+    padding: $spacing-md;
+  }
+
+  .article-window {
+    width: 100%;
+    border-left: none;
+  }
+
+  .app-container.article-visible .main-content {
+    transform: scale(0.85);
+    transform-origin: left center;
+    width: 100% !important;
+    margin-right: 0 !important;
+  }
+
+  .article-window.visible {
+    width: 100%;
+  }
+}
+
+@include respond-to(sm) {
+  .main-content {
+    padding: $spacing-sm;
+  }
+
+  .graph-container {
+    padding: $spacing-md;
+  }
+
+  .article-header {
+    padding: $spacing-sm $spacing-md;
+  }
+
+  .article-content {
+    padding: $spacing-md;
+  }
+}
+
+@media (max-width: $breakpoint-xxl) {
+  .article-window {
+    width: 500px;
+  }
+}
+
+@media (min-width: $breakpoint-xxl) {
+  .article-window {
+    width: 500px;
+  }
+}
+
+@include respond-to(xxxl) {
+  .article-window {
+    max-width: 800px;
+  }
+}

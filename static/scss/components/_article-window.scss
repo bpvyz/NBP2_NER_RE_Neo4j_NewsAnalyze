@@ -1,0 +1,67 @@
+.article-window {
+  position: fixed;
+  top: 0;
+  right: -800px;
+  width: 400px;
+  height: 100vh;
+  background-color: $card-bg;
+  box-shadow: -5px 0 30px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  z-index: 100;
+  border-left: 1px solid $border-color;
+  transition: right $transition-normal ease-out;
+  will-change: right;
+
+  &.visible {
+    right: 0;
+  }
+}
+
+.article-header {
+  padding: $spacing-md $spacing-lg;
+  border-bottom: 1px solid $border-color;
+  background-color: #fafafa;
+  position: relative;
+  padding-right: 40px;
+}
+
+.article-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+  padding-right: 20px;
+}
+
+.article-window-source {
+  font-size: 0.85rem;
+  color: $text-light;
+  margin-bottom: 0.5rem;
+  padding-right: 20px;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: $text-light;
+  padding: $spacing-sm;
+  transition: color $transition-fast;
+  position: absolute;
+  top: $spacing-md;
+  right: $spacing-md;
+  z-index: 10;
+  margin: 0;
+
+  &:hover {
+    color: $text-dark;
+  }
+}
+
+.article-content {
+  padding: $spacing-lg;
+  overflow-y: auto;
+  flex: 1;
+}

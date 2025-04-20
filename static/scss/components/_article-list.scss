@@ -1,0 +1,40 @@
+.article-list {
+  width: 300px;
+  background-color: $card-bg;
+  border-right: 1px solid $border-color;
+  overflow-y: auto;
+  padding: $spacing-md;
+  flex-shrink: 0;
+  @include custom-scrollbar();
+}
+
+.article-item {
+  padding: $spacing-md;
+  margin-bottom: $spacing-sm;
+  background-color: #fafafa;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all $transition-fast;
+  border-left: 3px solid transparent;
+
+  &:hover {
+    background-color: lighten-color($primary-color, 95%);
+    border-left: 3px solid $primary-color;
+  }
+
+  &.active {
+    background-color: lighten-color($primary-hover, 90%);
+    border-left: 3px solid $primary-color;
+  }
+
+  &-title {
+    font-weight: 500;
+    margin-bottom: $spacing-sm;
+    @include text-truncate;
+  }
+
+  &-meta {
+    font-size: 0.8rem;
+    color: $text-light;
+  }
+}
