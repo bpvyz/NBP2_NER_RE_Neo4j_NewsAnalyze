@@ -6,6 +6,7 @@
     {% endassets %}
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/sigma.js/1.2.1/sigma.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sigma.js/1.2.1/sigma.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sigma.js/1.2.1/plugins/sigma.layout.forceAtlas2.min.js"></script>
@@ -24,7 +25,7 @@
     <script src="{{ url_for('static', filename='js/plugins/sigma.renderers.parallelEdges/sigma.canvas.edges.labels.curve.js') }}"></script>
     <script src="{{ url_for('static', filename='js/plugins/sigma.renderers.parallelEdges/utils.js') }}"></script>
 
-    <title>Article Browser with Neo4j</title>
+    <title>Relata</title>
 </head>
 <body>
     <div class="app-container" id="appContainer">
