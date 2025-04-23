@@ -20,6 +20,7 @@
    * @return {x,y}        The control point coordinates.
    */
   sigma.utils.getQuadraticControlPoint = function(x1, y1, x2, y2, a) {
+    // a is the count parameter used in renderGraph function
     a = a || 0;
     return {
       x: (x1 + x2) / 2 + (y2 - y1) / (60 / (15 + a)),
@@ -39,6 +40,7 @@
    * @return {x1,y1,x2,y2} The coordinates of the two control points.
    */
   sigma.utils.getSelfLoopControlPoints = function(x , y, size, a) {
+    // 'a' is the 'count' parameter used in renderGraph function
     a = a || 0;
     return {
       x1: x - (size + a) * 7,

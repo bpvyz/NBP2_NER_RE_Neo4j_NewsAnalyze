@@ -26,7 +26,9 @@ const elements = {
     sourceGroupHeaders: document.querySelectorAll('.source-group-header'),
     biasGroups: document.querySelectorAll('.bias-group-content'),
     sourceGroups: document.querySelectorAll('.source-group-content'),
-    collapseIcons: document.querySelectorAll('.collapse-icon')
+    collapseIcons: document.querySelectorAll('.collapse-icon'),
+    loadingSpinner: document.querySelector('.loading-spinner'),
+    loadingText: document.querySelector('.loading-text'),
 };
 
 // ===== Utility Functions =====
@@ -68,6 +70,12 @@ async function openArticle(articleId) {
 
     try {
         elements.articleWindowContent.innerHTML = '<div class="loading-spinner"></div><p>Loading article...</p>';
+
+        // Show graph loading spinner
+        elements.loadingSpinner.style.display = 'block';
+        elements.loadingText.textContent = 'Loading graph...';
+        elements.loadingText.style.display = 'block';
+
         showArticleWindow(articleId);
 
         const [articleData, graphData] = await Promise.all([
@@ -83,6 +91,10 @@ async function openArticle(articleId) {
     } catch (error) {
         console.error("Error opening article:", error);
         elements.articleWindowContent.innerHTML = `<p class="error">Error loading article: ${error.message}</p>`;
+
+        // Hide spinner on error
+        elements.loadingSpinner.style.display = 'none';
+        elements.loadingText.textContent = 'Error loading graph';
     }
 }
 
@@ -139,15 +151,14 @@ function renderGraph(graphData) {
     }
 
     // Hide loading elements
-    // document.querySelector('.loading-spinner').style.display = 'none';
-    document.querySelector('.loading-text').style.display = 'none';
+    elements.loadingSpinner.style.display = 'none';
+    elements.loadingText.style.display = 'none';
 
     if (!graphData.nodes || !graphData.nodes.length) {
-        document.querySelector('.loading-text').textContent = 'No graph data available for this article';
-        document.querySelector('.loading-text').style.display = 'block';
+        elements.loadingText.textContent = 'No graph data available for this article';
+        elements.loadingText.style.display = 'block';
         return;
     }
-
 
     elements.graphContainer.innerHTML = '';
 
@@ -176,20 +187,40 @@ function renderGraph(graphData) {
             });
         });
 
-        // Process edges - ensure each edge has a label property
+
+        // Process edges with proper count assignment for parallel edges
+        const edgePairs = {};
+
         graphData.edges.forEach((edge, i) => {
-            sigmaGraph.edges.push({
-                id: `e${i}`,
-                source: edge.from.toString(),
-                target: edge.to.toString(),
-                label: edge.label || '', // Ensure label exists even if empty
-                color: '#ccc',
-                size: 1,
-                type: 'arrow'
-            });
+            const sourceId = edge.from.toString();
+            const targetId = edge.to.toString();
+
+            // Create a directional key for this source-target pair
+            const edgeKey = `${sourceId}->${targetId}`;
+
+            // Initialize or increment the count for this edge pair
+            if (!edgePairs[edgeKey]) {
+                edgePairs[edgeKey] = 0;
+            }
+
+            if (edge.label!="MENTIONS"){
+                // Assign the exact count (starting from 0) to this edge
+                sigmaGraph.edges.push({
+                    id: `e${i}`,
+                    source: sourceId,
+                    target: targetId,
+                    label: edge.label || '',
+                    color: '#ccc',
+                    size: 1,
+                    type: 'curvedArrow',
+                    count: edgePairs[edgeKey] // This should be the index (starting from 0) among parallel edges
+                    // Check static/js/plugins/sigma.renderers.parallelEdges/utils.js for use of 'count' parameter
+                });
+                edgePairs[edgeKey]+=20; // Increase/decrease this number to make the curves more curvy/less curvy
+            }
         });
 
-        // Initialize Sigma.js with proper settings for edge labels
+        // Initialize Sigma.js with proper settings for edge labels and curved arrows
         currentState.graphInstance = new sigma({
             graph: sigmaGraph,
             container: 'sigma-container',
@@ -212,11 +243,11 @@ function renderGraph(graphData) {
                 edgeHoverSizeRatio: 2,
 
                 // Edge label specific settings
-                drawEdgeLabels: true, // This must be true
-                edgeLabelSize: 'proportional',
-                edgeLabelSizeRatio: 0.5,
+                drawEdgeLabels: true,
+                edgeLabelSize: 'fixed',
+                edgeLabelSizeRatio: 1.5,
                 edgeLabelColor: {
-                    color: '#393939' // Black edge labels
+                    color: '#393939'
                 },
                 defaultEdgeLabelColor: '#393939',
                 edgeLabelActiveColor: '#393939',
@@ -224,15 +255,16 @@ function renderGraph(graphData) {
                 // Other settings
                 drawEdges: true,
                 drawNodes: true,
+                enableEdgeHovering: true,
+                edgeHoverPrecision: 10,
                 labelSize: 'proportional',
                 labelSizeRatio: 1,
-                minArrowSize: 5
+                minArrowSize: 5  // Important for the curved arrows
             }
         });
 
-        // Register edge label renderers
-        sigma.canvas.edges.labels.def = sigma.canvas.edges.labels.def;
-        sigma.canvas.edges.labels.curve = sigma.canvas.edges.labels.curve;
+        // Register edge label renderers for curved arrows
+        sigma.canvas.edges.labels.curvedArrow = sigma.canvas.edges.labels.curve;
 
         // Initialize dragNodes plugin
         const dragListener = sigma.plugins.dragNodes(currentState.graphInstance, currentState.graphInstance.renderers[0]);
@@ -241,10 +273,8 @@ function renderGraph(graphData) {
         createTooltipSystem(currentState.graphInstance);
 
         // Apply ForceAtlas2 layout algorithm
-        // https://graphology.github.io/standard-library/layout-forceatlas2.html
         currentState.graphInstance.startForceAtlas2({
-            // worker: true,
-            barnesHutOptimize: false, // za manje od 100 cvorova nije potreban
+            barnesHutOptimize: false,
             slowDown: 100,
             gravity: 10,
             scalingRatio: 4,
@@ -256,7 +286,7 @@ function renderGraph(graphData) {
             if (currentState.graphInstance) {
                 currentState.graphInstance.stopForceAtlas2();
             }
-        }, 100); // Povecanje timeout-a cini graph vise preglednijim ali sporijim
+        }, 100);
 
     } catch (error) {
         console.error("Error rendering graph:", error);

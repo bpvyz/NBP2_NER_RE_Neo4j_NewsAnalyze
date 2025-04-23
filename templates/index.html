@@ -6,7 +6,7 @@
     {% endassets %}
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/sigma.js/1.2.1/sigma.min.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/sigma.js/1.2.1/sigma.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sigma.js/1.2.1/sigma.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sigma.js/1.2.1/plugins/sigma.layout.forceAtlas2.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sigma.js/1.2.1/plugins/sigma.parsers.json.min.js"></script>
@@ -15,7 +15,15 @@
     <script src="{{ url_for('static', filename='js/plugins/sigma.renderers.edgeLabels/sigma.canvas.edges.labels.def.js') }}"></script>
     <script src="{{ url_for('static', filename='js/plugins/sigma.renderers.edgeLabels/sigma.canvas.edges.labels.curve.js') }}"></script>
     <script src="{{ url_for('static', filename='js/plugins/sigma.renderers.edgeLabels/sigma.canvas.edges.labels.curvedArrow.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/plugins/sigma.canvas.edges.curvedArrow.js') }}"></script>
     <script src="{{ url_for('static', filename='js/plugins/sigma.plugins.dragNodes/sigma.plugins.dragNodes.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/plugins/sigma.renderers.parallelEdges/sigma.canvas.edgehovers.curve.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/plugins/sigma.renderers.parallelEdges/sigma.canvas.edgehovers.curvedArrow.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/plugins/sigma.renderers.parallelEdges/sigma.canvas.edges.curve.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/plugins/sigma.renderers.parallelEdges/sigma.canvas.edges.curvedArrow.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/plugins/sigma.renderers.parallelEdges/sigma.canvas.edges.labels.curve.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/plugins/sigma.renderers.parallelEdges/utils.js') }}"></script>
+
     <title>Article Browser with Neo4j</title>
 </head>
 <body>
@@ -59,7 +67,7 @@
                 <div id="sigma-container"></div>
 
                 <!-- These elements will persist -->
-                <!-- <div class="loading-spinner"></div> -->
+                 <div class="loading-spinner"></div>
 
                 <p class="loading-text">Waiting for a graph...</p>
                 <button class="fullscreen-btn" id="fullscreenBtn" title="Toggle Fullscreen">
