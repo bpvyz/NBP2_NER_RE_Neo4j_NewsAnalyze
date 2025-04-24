@@ -2,6 +2,8 @@ import os
 import json
 from dotenv import load_dotenv
 from neo4j import GraphDatabase
+from tqdm import tqdm
+from colorama import Fore
 # from rapidfuzz import fuzz  # Removed: no fuzzy matching
 
 load_dotenv()
@@ -53,7 +55,7 @@ class ArticleGraph:
         return tx.run(query, from_name=from_entity, to_name=to_entity, article_title=article_title).single()
 
     def process_all_articles(self, articles):
-        print("Processing articles...")
+        print(Fore.CYAN + "🚀 Starting article processing...\n")
 
         # Removed first pass for collecting entity labels and variants
         # for article in articles:
@@ -69,9 +71,23 @@ class ArticleGraph:
         #                 self.label_usage_count[label] = self.label_usage_count.get(label, 0) + 1
         #                 self.all_labels.append(label)
 
-        for i, article in enumerate(articles):
-            print(f"\nProcessing article {i + 1}/{len(articles)}: {article['article_title']}")
-            self.create_article_with_entities_and_relations(article)
+        with tqdm(
+                total=len(articles),
+                desc="Processing Articles",
+                bar_format="{l_bar}{bar}| {n}/{total} [{elapsed}<{remaining}, {rate_fmt}]",
+                colour='blue',
+                leave=False,
+                unit="article",
+                unit_scale=True,
+                smoothing=0.1,
+                miniters=1
+        ) as pbar:
+            for article in articles:
+                self.create_article_with_entities_and_relations(article)
+                pbar.update(1)
+
+        # Replace the progress bar with a completion message
+        print(f"\r{Fore.GREEN}✔ All {len(articles)} articles processed successfully{' ' * 20}")
 
     def create_article_with_entities_and_relations(self, article_data):
         with self.driver.session() as session:
@@ -122,7 +138,6 @@ class ArticleGraph:
 
                 from_entity, rel_type, to_entity, direction = self.process_relationship_string(relation)
                 if None in [from_entity, rel_type, to_entity, direction]:
-                    print(f"Skipping malformed relation: {relation}")
                     continue
 
                 rel_type_clean = ''.join(c for c in rel_type.upper().replace(" ", "_") if c.isalnum() or c == '_')

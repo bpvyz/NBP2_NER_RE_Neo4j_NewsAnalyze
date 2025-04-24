@@ -1,18 +1,17 @@
-import requests
-from bs4 import BeautifulSoup
-from urllib.parse import urljoin
 import json
-import time
 import os
 import re
-from concurrent.futures import ThreadPoolExecutor, as_completed
+import asyncio
+import aiohttp
+from tqdm.asyncio import tqdm
 from colorama import Fore, init
-import threading
+from bs4 import BeautifulSoup
+from urllib.parse import urljoin
+import time
 
 init(autoreset=True)
 
-print_lock = threading.Lock()
-
+# Load configuration files
 with open('sources.json', 'r', encoding='utf-8') as f:
     SOURCES = json.load(f)
 
@@ -23,15 +22,16 @@ HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
 }
 
-def fetch_page(url):
+
+async def fetch_page(session, url):
     try:
-        response = requests.get(url, headers=HEADERS, timeout=10)
-        response.encoding = 'utf-8'
-        response.raise_for_status()
-        return response.text
+        async with session.get(url, headers=HEADERS, timeout=aiohttp.ClientTimeout(total=10)) as response:
+            response.raise_for_status()
+            return await response.text(encoding='utf-8')
     except Exception as e:
         print(Fore.RED + f"🚨 Failed to fetch {url}: {str(e)}")
         return None
+
 
 def clean_paragraphs(body, scrape_all_p):
     text_parts = []
@@ -42,7 +42,7 @@ def clean_paragraphs(body, scrape_all_p):
     if not paragraphs:
         return []
 
-    if not isinstance(paragraphs, list):  # Single paragraph
+    if not isinstance(paragraphs, list):
         paragraphs = [paragraphs]
 
     for p in paragraphs:
@@ -54,10 +54,11 @@ def clean_paragraphs(body, scrape_all_p):
     return text_parts
 
 
-def extract_article_body(article_url, rules):
-    html = fetch_page(article_url)
+async def extract_article_body(session, article_url, rules):
+    html = await fetch_page(session, article_url)
     if not html:
         return None
+
     soup = BeautifulSoup(html, 'html.parser')
     container = soup.select_one(rules.get("full_text_container", ""))
     if container:
@@ -66,115 +67,135 @@ def extract_article_body(article_url, rules):
     return None
 
 
-def scrape_news_site(base_url, site_name, bias):
+def is_politics_url(url):
+    politics_keywords = ['/politika/', '/politics/', '/vesti/', '/news/']
+    return any(kw in url.lower() for kw in politics_keywords)
+
+
+async def process_article(session, item, rules, base_url, site_name, bias, article_pbar):
+    try:
+        link_tag = item.select_one(rules["link"])
+        title_tag = item.select_one(rules["title"])
+        if not link_tag or not title_tag:
+            return None
+
+        link = link_tag["href"]
+        if not is_politics_url(link):
+            return None
+
+        title = title_tag.get_text(strip=True)
+        full_url = urljoin(base_url, link)
+        body = await extract_article_body(session, full_url, rules)
+
+        if body:
+            article_pbar.set_postfix_str(f"📰 {title[:30]}...", refresh=True)
+            article_pbar.update(1)
+            return {
+                "source": site_name,
+                "bias": bias,
+                "title": title,
+                "url": full_url,
+                "text": body
+            }
+    except Exception as e:
+        print(Fore.RED + f"❌ Error processing article: {str(e)}")
+        return None
+
+async def scrape_site(session, source, position):
+    base_url = source["url"]
+    site_name = source["name"]
+    bias = source["bias"]
     domain = base_url.split("//")[-1].split("/")[0]
     sections = SCRAPING_RULES.get(domain, {})
 
     if not sections:
-        print(Fore.YELLOW + f"⚠️ No scraping sections defined for {domain}. Skipping.")
+        tqdm.write(f"{Fore.YELLOW}⚠️ {site_name[:15]:<15} | No scraping rules")
         return []
 
-    print(Fore.CYAN + f"🔍 Scraping {site_name} ({base_url})...")
-    html = fetch_page(base_url)
+    html = await fetch_page(session, base_url)
     if not html:
+        tqdm.write(f"{Fore.RED}⚠️ {site_name[:15]:<15} | Failed to fetch")
         return []
 
     soup = BeautifulSoup(html, 'html.parser')
-    articles = []
-    tasks = []
+    article_items = []
 
-    def is_politics_url(url):
-        """Check if URL belongs to politics section"""
-        politics_keywords = ['/politika/', '/politics/', '/vesti/', '/news/']
-        return any(kw in url.lower() for kw in politics_keywords)
+    for section in sections:
+        rules = sections.get(section, {})
+        if site_name == "Informer" and rules.get("subsections"):
+            subsection = soup.find_all(attrs={"data-category": "#e6272a"})
+            if subsection:
+                article_items.extend(subsection[-1].select(rules["container"]))
+        elif site_name == "Informer":
+            for main_news in soup.select(rules["main_container"]):
+                article_items.extend(main_news.select(rules["container"]))
+        else:
+            article_items.extend(soup.select(rules["container"]))
 
-    def process_article(item, rules):
-        try:
-            link_tag = item.select_one(rules["link"])
-            title_tag = item.select_one(rules["title"])
-            if not link_tag or not title_tag:
-                return None
+    article_items = [item for item in article_items
+                     if is_politics_url(item.select_one(rules["link"])["href"])]
 
-            link = link_tag["href"]
-            if not is_politics_url(link):  # Skip non-political articles
-                return None
+    # Lokalni progress bar za ovaj sajt
+    article_pbar = tqdm(
+        total=len(article_items),
+        desc=f"{site_name[:15]:<15}",
+        bar_format="{l_bar}{bar}| {n}/{total} [{elapsed}<{remaining}, {rate_fmt}]",
+        colour='blue',
+        leave=False,
+        unit="article",
+        unit_scale=True,
+        miniters=1,
+        position=position
+    )
 
-            title = title_tag.get_text(strip=True)
-            full_url = urljoin(base_url, link)
-            body = extract_article_body(full_url, rules)
+    results = []
+    semaphore = asyncio.Semaphore(5)
 
-            if body:
-                with print_lock:
-                    print(Fore.GREEN + f"  ✔️ Scraped: {title[:50]}...")
-                return {
-                    "source": site_name,
-                    "bias": bias,
-                    "title": title,
-                    "url": full_url,
-                    "text": body
-                }
-        except Exception as e:
-            print(Fore.RED + f"❌ Error processing article: {str(e)}")
-            return None
+    async def process_with_semaphore(item):
+        async with semaphore:
+            result = await process_article(session, item, rules, base_url, site_name, bias, article_pbar)
+            return result
 
-    # Rest of your existing code...
+    tasks = [process_with_semaphore(item) for item in article_items]
+    results = await asyncio.gather(*tasks)
 
-    with ThreadPoolExecutor(max_workers=5) as executor:
-        for section in sections:
-            rules = sections.get(section, {})
-            if site_name == "Informer" and rules.get("subsections"):
-                subsection = soup.find_all(attrs={"data-category": "#e6272a"})
-                if not subsection:
-                    continue
-                for item in subsection[-1].select(rules["container"]):
-                    tasks.append(executor.submit(process_article, item, rules))
-            elif site_name == "Informer":
-                for main_news in soup.select(rules["main_container"]):
-                    for item in main_news.select(rules["container"]):
-                        tasks.append(executor.submit(process_article, item, rules))
-            else:
-                for item in soup.select(rules["container"]):
-                    tasks.append(executor.submit(process_article, item, rules))
+    article_pbar.close()
 
-        for task in tasks:
-            result = task.result()
-            if result:
-                articles.append(result)
+    successful_articles = len([r for r in results if r is not None])
+    tqdm.write(f"{Fore.GREEN}✔ {site_name[:15]:<15} | {successful_articles} articles saved")
 
-    return articles
+    return [result for result in results if result]
 
-def save_to_json(data, filename="data/serbian_news_articles.json"):
-    os.makedirs(os.path.dirname(filename), exist_ok=True)
-    with open(filename, 'w', encoding='utf-8') as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
-    print(Fore.GREEN + f"✅ Saved {len(data)} articles to {filename}")
 
-if __name__ == "__main__":
+async def save_results(results):
+    all_articles = [article for sublist in results for article in sublist]
+
+    if not all_articles:
+        print(Fore.RED + "No articles were scraped")
+        return
+
+    os.makedirs("data", exist_ok=True)
+    with open("data/serbian_news_articles.json", "w", encoding="utf-8") as f:
+        json.dump(all_articles, f, ensure_ascii=False, indent=2)
+    print(Fore.GREEN + f"\n✅ Total {len(all_articles)} articles saved to data/serbian_news_articles.json")
+
+
+async def main():
     start_time = time.time()
-    all_articles = []
+    print(Fore.CYAN + "🚀 Starting news scraping...\n")
 
-    with ThreadPoolExecutor(max_workers=5) as executor:
-        futures = {
-            executor.submit(scrape_news_site, source["url"], source["name"], source["bias"]): source
-            for source in SOURCES
-        }
+    async with aiohttp.ClientSession() as session:
+        tasks = []
+        for idx, source in enumerate(SOURCES):
+            tasks.append(scrape_site(session, source, idx))  # pozicija po indeksu
 
-        for future in as_completed(futures):
-            source = futures[future]
-            try:
-                articles = future.result()
-                all_articles.extend(articles)
-                with print_lock:
-                    print(Fore.RED + f"✅ Found {len(articles)} articles from {source['name']}")
-            except Exception as e:
-                with print_lock:
-                    print(Fore.RED + f"❌ Error scraping {source['name']}: {e}")
+        results = await asyncio.gather(*tasks)
 
-    if all_articles:
-        save_to_json(all_articles)
-    else:
-        print(Fore.RED + "No articles were scraped. Check your selectors.")
+        await save_results(results)
 
     elapsed_time = time.time() - start_time
-    with print_lock:
-        print(Fore.YELLOW + f"⏱ Total scraping time: {elapsed_time:.2f} seconds")
+    print(Fore.YELLOW + f"\n⏱ Completed in {elapsed_time:.2f} seconds\n")
+
+
+if __name__ == "__main__":
+    asyncio.run(main())

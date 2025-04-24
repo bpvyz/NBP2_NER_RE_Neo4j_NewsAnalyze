@@ -86,8 +86,17 @@ async def process_articles():
     results = await tqdm_asyncio.gather(
         *(process_article(article) for article in subset),
         desc="🔍 Obrada vesti",
-        total=len(subset)
+        total=len(subset),
+        colour='blue',
+        leave=False,
+        unit="article",
+        unit_scale=True,
+        smoothing=0.1,
+        miniters=1,
+        bar_format="{l_bar}{bar}| {n}/{total} [{elapsed}<{remaining}, {rate_fmt}]",
     )
+
+    print(f"\r{Fore.GREEN}✔ All {len(results)} articles analyzed successfully{' ' * 20}")
 
     results = [r for r in results if r]
 

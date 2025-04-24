@@ -30,12 +30,6 @@ scss404_bundle = Bundle(
 assets.register('scss_all', scss_bundle)
 assets.register('scss404_all', scss404_bundle)
 
-try:
-    scss404_bundle.build()
-    print("Successfully built 404 CSS bundle")
-except Exception as e:
-    print(f"Error building 404 CSS bundle: {e}")
-
 # Configuration
 class Config:
     NEO4J_URI = os.getenv("NEO4J_URI")
