@@ -1,0 +1,13 @@
+body {
+  background-color: $background;
+  color: $text-primary;
+  @include flex-center;
+  min-height: 100vh;
+  padding: 2rem;
+}
+
+.container {
+  max-width: 600px;
+  text-align: center;
+  animation: fadeIn 0.6s ease-in-out;
+}

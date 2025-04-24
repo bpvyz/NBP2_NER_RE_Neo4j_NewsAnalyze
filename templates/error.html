@@ -2,9 +2,32 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Title</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relata - {{ message.split(' ')[0] }}</title>
+    {% assets "scss404_all" %}
+        <link rel="stylesheet" href="{{ ASSET_URL }}">
+    {% endassets %}
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
 </head>
 <body>
-<p>Error 404!</p>
+    <div class="container">
+        <div class="error-code">{{ message.split(' ')[0] }}</div>
+        <h1>{{ ' '.join(message.split(' ')[1:]) }}</h1>
+        <p>{{ full_message }}</p>
+
+        <div class="face-container">
+            <div class="face">
+                <div class="eyes">
+                    <div class="eye"></div>
+                    <div class="eye"></div>
+                </div>
+                <div class="mouth"></div>
+                <div class="tear tear-left"></div>
+                <div class="tear tear-right"></div>
+            </div>
+        </div>
+
+        <a href="/" class="home-button">Back to Home</a>
+    </div>
 </body>
 </html>

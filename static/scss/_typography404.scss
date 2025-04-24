@@ -1,0 +1,23 @@
+.error-code {
+  font-size: 8rem;
+  font-weight: 700;
+  color: $primary-color;
+  margin-bottom: 1rem;
+  background: $primary-gradient;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+h1 {
+  font-size: 2rem;
+  margin-bottom: 1.5rem;
+  color: $text-dark;
+}
+
+p {
+  font-size: 1.125rem;
+  margin-bottom: 2rem;
+  color: $text-secondary;
+  line-height: 1.6;
+}

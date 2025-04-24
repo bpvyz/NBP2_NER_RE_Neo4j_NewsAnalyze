@@ -10,6 +10,9 @@ load_dotenv()
 app = Flask(__name__)
 
 assets = Environment(app)
+assets.url = app.static_url_path
+assets.cache = False
+assets.manifest = False
 
 scss_bundle = Bundle(
     'scss/main.scss',
@@ -18,7 +21,20 @@ scss_bundle = Bundle(
     depends='scss/**/*.scss'
 )
 
+scss404_bundle = Bundle(
+    'scss/main404.scss',
+    filters='libsass,cssmin',
+    output='css/404.min.css'
+)
+
 assets.register('scss_all', scss_bundle)
+assets.register('scss404_all', scss404_bundle)
+
+try:
+    scss404_bundle.build()
+    print("Successfully built 404 CSS bundle")
+except Exception as e:
+    print(f"Error building 404 CSS bundle: {e}")
 
 # Configuration
 class Config:
@@ -218,11 +234,13 @@ def get_article_content(article_id):
 # Error handlers
 @app.errorhandler(404)
 def page_not_found(e):
-    return render_template('error.html', message="Page not found"), 404
+    return render_template('error.html', message="404 Page not found",
+                            full_message="Oops! The page you're looking for doesn't exist or has been moved."), 404
 
 @app.errorhandler(500)
 def internal_server_error(e):
-    return render_template('error.html', message="Internal server error"), 500
+    return render_template('error.html', message="500 Internal server error",
+                            full_message="Oops! There has been a internal server error!"), 500
 
 if __name__ == "__main__":
     app.run(debug=True)

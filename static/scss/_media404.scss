@@ -1,0 +1,39 @@
+@media (max-width: 768px) {
+  .error-code {
+    font-size: 6rem;
+  }
+
+  h1 {
+    font-size: 1.75rem;
+  }
+
+  .face-container {
+    width: 160px;
+    height: 160px;
+  }
+
+  .eye {
+    width: 24px;
+    height: 24px;
+  }
+
+  .mouth {
+    width: 60px;
+    height: 30px;
+    border-width: 5px;
+  }
+
+  .tear {
+    &.tear-left {
+      width: 10px;
+      height: 16px;
+      left: 50px;
+    }
+
+    &.tear-right {
+      width: 8px;
+      height: 12px;
+      right: 50px;
+    }
+  }
+}
