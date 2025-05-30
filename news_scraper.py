@@ -25,7 +25,7 @@ HEADERS = {
 
 async def fetch_page(session, url):
     try:
-        async with session.get(url, headers=HEADERS, timeout=aiohttp.ClientTimeout(total=10)) as response:
+        async with session.get(url, headers=HEADERS, timeout=aiohttp.ClientTimeout(total=15)) as response:
             response.raise_for_status()
             return await response.text(encoding='utf-8')
     except Exception as e:
@@ -80,10 +80,9 @@ async def process_article(session, item, rules, base_url, site_name, bias, artic
             return None
 
         link = link_tag["href"]
-        if not is_politics_url(link):
-            return None
 
         title = title_tag.get_text(strip=True)
+
         full_url = urljoin(base_url, link)
         body = await extract_article_body(session, full_url, rules)
 
@@ -122,6 +121,26 @@ async def scrape_site(session, source, position):
 
     for section in sections:
         rules = sections.get(section, {})
+
+        # filtered_items = []
+        # print("PAGE TITLE:", soup.title.text)
+        # archive_div = soup.find(attrs={"data-selector": "archive-page-content"})
+        # if not archive_div:
+        #     print("⚠️ Nije pronađen archive-page-content!")
+        # else:
+        #     article_items = archive_div.find_all(attrs={"class": "article-wrapper"})
+        #     for item in article_items:
+        #         link_tag = item.select_one(rules["link"])
+        #         if link_tag:
+        #             href = link_tag.get("href", "")
+        #             print("Link:", href)
+        #             if is_politics_url(href):
+        #                 filtered_items.append(item)
+        #
+        #     print(f"Filtrirano clanaka: {len(filtered_items)}")
+        #     print(f"✅ Pronađeno članaka: {len(article_items)}")
+
+
         if site_name == "Informer" and rules.get("subsections"):
             subsection = soup.find_all(attrs={"data-category": "#e6272a"})
             if subsection:
@@ -129,6 +148,12 @@ async def scrape_site(session, source, position):
         elif site_name == "Informer":
             for main_news in soup.select(rules["main_container"]):
                 article_items.extend(main_news.select(rules["container"]))
+        elif site_name == "N1":
+            archive_div = soup.find(attrs={"data-selector": "archive-page-content"})
+            if archive_div:
+                items = archive_div.find_all(attrs={"class": "article-wrapper"})
+                print("pronadjeno ", len(items))
+                article_items.extend(items)
         else:
             article_items.extend(soup.select(rules["container"]))
 

@@ -29,9 +29,9 @@
     },
     "n1info.rs": {
         "section1": {
-            "container": "article.post",
-            "link": "a[href]",
-            "title": "a.uc-block-post-grid-title-link",
+            "container": "div.page-content",
+            "link": "a",
+            "title": "h3 > a",
             "full_text_container": "div.entry-content",
             "scrape_all_p": true
         }
