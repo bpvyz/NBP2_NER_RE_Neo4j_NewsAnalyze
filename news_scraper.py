@@ -33,10 +33,13 @@ async def fetch_page(session, url):
         return None
 
 
-def clean_paragraphs(body, scrape_all_p):
+def clean_paragraphs(body, scrape_all_p, site_name):
     text_parts = []
-    for tag in body.find_all(["div", "figure"]):
-        tag.decompose()
+
+    # uklanja glupe div-ove izmedju paragrafa
+    if(site_name!="N1"):
+        for tag in body.find_all(["div", "figure"]):
+            tag.decompose()
 
     paragraphs = body.find_all("p") if scrape_all_p else body.find("p")
     if not paragraphs:
@@ -45,24 +48,24 @@ def clean_paragraphs(body, scrape_all_p):
     if not isinstance(paragraphs, list):
         paragraphs = [paragraphs]
 
+    # brise gluposti na kraju clanka
     for p in paragraphs:
         text = p.get_text(separator=' ', strip=True)
-        text = re.sub(r'Ostavite komentar|Autor:.*', '', text)
+        text = re.sub(r'Ostavite komentar|Autor|Podeli|Pridružite se diskusiji ili pročitajte komentar.*', '', text)
         if text and text not in text_parts:
             text_parts.append(text)
 
     return text_parts
 
 
-async def extract_article_body(session, article_url, rules):
+async def extract_article_body(session, article_url, rules, site_name):
     html = await fetch_page(session, article_url)
     if not html:
         return None
-
     soup = BeautifulSoup(html, 'html.parser')
     container = soup.select_one(rules.get("full_text_container", ""))
     if container:
-        paragraphs = clean_paragraphs(container, rules.get("scrape_all_p", False))
+        paragraphs = clean_paragraphs(container, rules.get("scrape_all_p", False), site_name)
         return " ".join(paragraphs) if paragraphs else None
     return None
 
@@ -84,7 +87,7 @@ async def process_article(session, item, rules, base_url, site_name, bias, artic
         title = title_tag.get_text(strip=True)
 
         full_url = urljoin(base_url, link)
-        body = await extract_article_body(session, full_url, rules)
+        body = await extract_article_body(session, full_url, rules, site_name)
 
         if body:
             article_pbar.set_postfix_str(f"📰 {title[:30]}...", refresh=True)
@@ -96,6 +99,7 @@ async def process_article(session, item, rules, base_url, site_name, bias, artic
                 "url": full_url,
                 "text": body
             }
+        return None
     except Exception as e:
         print(Fore.RED + f"❌ Error processing article: {str(e)}")
         return None
@@ -152,7 +156,6 @@ async def scrape_site(session, source, position):
             archive_div = soup.find(attrs={"data-selector": "archive-page-content"})
             if archive_div:
                 items = archive_div.find_all(attrs={"class": "article-wrapper"})
-                print("pronadjeno ", len(items))
                 article_items.extend(items)
         else:
             article_items.extend(soup.select(rules["container"]))

@@ -21,24 +21,29 @@ with open("data/serbian_news_articles.json", "r", encoding="utf-8") as f:
 
 async def extract_entities_and_relations(text):
     prompt = f"""
-    Izvuci entitete (Osoba, Organizacija, Lokacija, Vreme, Aktivnost, AktivnostDogađaj, Događaj, Grupa, Vozilo, Proizvod, Umetničko delo, Dokument, Biljka, Broj, Hrana, Piće, Institucija, Simbol, HranaPiće, Životinja, Tehnologija) i deskriptivne relacije (događaji, akcije, interakcije) iz sledećeg teksta vesti, 
-    koristeći odgovarajuće tipove za Neo4j. Relacije treba da budu konkretne, jasno definisane između entiteta, dok entiteti treba da budu označeni sa odgovarajućim labelama 
-    (npr. Osoba, Organizacija, Lokacija, Vreme, Aktivnost/Događaj, Vozilo, Proizvod, Umetničko delo, Dokument, Hrana/Piće, Životinja, Biljka, Tehnologija, itd.).
+Izvuci entitete (Osoba, Organizacija, Lokacija, Vreme, Aktivnost, AktivnostDogađaj, Događaj, Grupa, Vozilo, Proizvod, Umetničko delo, Dokument, Biljka, Broj, Hrana, Piće, Institucija, Simbol, HranaPiće, Životinja, Tehnologija) i deskriptivne relacije (događaji, akcije, interakcije) iz sledećeg teksta vesti, koristeći odgovarajuće tipove za Neo4j.
 
-    Tekst vesti:
-    {text}
+Relacije moraju biti konkretne, jasno definisane između entiteta. Svaki entitet mora biti označen jednom od dozvoljenih labela.
 
-    Odgovor u sledećem formatu:
-    Entiteti: [entitet1:label, entitet2:label, entitet3:label]
-    Relacije: [entitet1 -[:relation]-> entitet2, entitet3 -[:relation]-> entitet4]
+Tekst vesti:
+{text}
 
-    Bez uvodnih fraza, samo entiteti i relacije, tačno u ovom formatu.
-    Za svaki entitet formirati odgovarajuću relaciju.
-    Za svaki entitet koji učestvuje u relaciji formirati odgovarajući label.
-    Svi entiteti i sve relacije moraju biti isključivo na srpskom jeziku. Nije dozvoljeno koristiti engleske, hrvatske ili strane nazive.
-    Na primer, 'European Union' treba biti 'Evropska unija', 'Germany' treba biti 'Nemačka', 'Croatian police' treba biti 'hrvatska policija'.
-    Nije dozvoljeno koristiti generičku labelu "Entity". Svaki entitet mora imati konkretnu i tačnu labelu iz gore navedene liste.
-    """
+Odgovor u tačno sledećem formatu:
+Entiteti: [entitet1:label, entitet2:label, entitet3:label]
+Relacije: [entitet1 -[:relacija]-> entitet2, entitet3 -[:relacija]-> entitet4]
+
+**Pravila:**
+
+1. **Svi entiteti navedeni u listi `Entiteti:` moraju učestvovati u najmanje jednoj relaciji.**
+2. **Ne sme biti entiteta u listi `Entiteti:` koji se ne pojavljuju ni u jednoj relaciji.**
+3. **Ne sme biti entiteta u `Relacije:` koji nisu prethodno navedeni u `Entiteti:`.**
+4. Svi entiteti moraju imati tačnu labelu iz dozvoljene liste (npr. Osoba, Lokacija, Aktivnost itd.). Nije dozvoljena generička oznaka poput "Entity".
+5. Svi nazivi entiteta i relacija moraju biti isključivo na srpskom jeziku. Strani izrazi nisu dozvoljeni. Primer: "Germany" → "Nemačka", "European Union" → "Evropska unija".
+6. Nisu dozvoljeni opisni izrazi kao što su "grupa ljudi", "neki događaj", već samo eksplicitno navedeni entiteti iz teksta.
+7. Sve relacije moraju biti precizno imenovane i povezivati samo entitete iz liste `Entiteti:`.
+
+Napomena: Odgovor treba da sadrži **samo listu entiteta i relacija**, bez dodatnih objašnjenja, komentara ili uvodnih rečenica.
+"""
 
     response = await client.chat.completions.create(
         model="gpt-4o-mini",

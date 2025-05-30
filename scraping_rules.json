@@ -32,7 +32,7 @@
             "container": "div.page-content",
             "link": "a",
             "title": "h3 > a",
-            "full_text_container": "div.entry-content",
+            "full_text_container": "article.article-wrapper",
             "scrape_all_p": true
         }
     },
