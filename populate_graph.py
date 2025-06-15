@@ -108,7 +108,7 @@ class ArticleGraph:
                bias=article["article_bias"],
                text=article["article_text"])
 
-        # Map entity name to label from article['entities']
+        # map entity name to label from article['entities']
         entity_labels_map = {}
         if "entities" in article and article["entities"]:
             entities = article["entities"].split(", ")

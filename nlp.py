@@ -13,7 +13,7 @@ load_dotenv()
 init(autoreset=True)
 
 # Inicijalizacija asinhronog klijenta
-client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+client = AsyncOpenAI(base_url="https://openrouter.ai/api/v1", api_key=os.getenv("OPENAI_API_KEY"))
 
 # Učitaj vesti iz JSON fajla
 with open("data/serbian_news_articles.json", "r", encoding="utf-8") as f:
@@ -46,7 +46,7 @@ Napomena: Odgovor treba da sadrži **samo listu entiteta i relacija**, bez dodat
 """
 
     response = await client.chat.completions.create(
-        model="gpt-4o-mini",
+        model="google/gemini-2.0-flash-001",
         messages=[{"role": "user", "content": prompt}],
         temperature=0.2
     )
