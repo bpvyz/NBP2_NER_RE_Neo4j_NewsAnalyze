@@ -223,6 +223,8 @@ def get_article_content(article_id):
             "source": article.get("source", ""),
             "bias": article.get("bias", "#"),
             "url": article.get("url", "#"),
+            "factCheck": article.get("fact_check", "Nema dostupne informacije o proveri činjenica."),
+            "tone": article.get("tone", "Nema dostupne analize tona.")
         })
 
 # Error handlers

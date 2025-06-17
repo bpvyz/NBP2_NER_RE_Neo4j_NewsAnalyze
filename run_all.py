@@ -15,7 +15,6 @@ SCRIPTS_TO_RUN = [
 
 init(autoreset=True)
 
-
 def run_scripts(scripts: List[str]) -> bool:
     """Run all scripts in sequence, return True if all succeeded"""
     overall_success = True

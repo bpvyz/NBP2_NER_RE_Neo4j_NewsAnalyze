@@ -95,18 +95,20 @@ class ArticleGraph:
 
     def _create_article_graph(self, tx, article):
         tx.run("""
-            MERGE (a:Article {
-                title: $title,
-                url: $url,
-                source: $source,
-                bias: $bias,
-                text: $text
-            })
+            MERGE (a:Article {title: $title})
+            SET a.url = $url,
+                a.source = $source,
+                a.bias = $bias,
+                a.text = $text,
+                a.fact_check = $fact_check,
+                a.tone = $tone
         """, title=article["article_title"],
                url=article["article_url"],
                source=article["article_source"],
                bias=article["article_bias"],
-               text=article["article_text"])
+               text=article["article_text"],
+               fact_check=article.get("fact_check", ""),
+               tone=article.get("tone_analysis", ""))
 
         # map entity name to label from article['entities']
         entity_labels_map = {}

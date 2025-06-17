@@ -127,12 +127,22 @@ function renderArticle(articleData) {
     elements.articleWindowSource.textContent = articleData.source;
     elements.articleWindowSource.href = articleData.url;
 
+    const factCheckHtml = articleData.factCheck.replace(/\n/g, '<br>');
+    const toneHtml = articleData.tone.replace(/\n/g, '<br>');
+
     elements.articleWindowContent.innerHTML = `
         <div class="article-meta">
             <span class="article-date">${articleData.date}</span>
             <span class="article-read-time">${articleData.readTime}</span>
         </div>
         <div class="article-text">${articleData.content}</div>
+
+        <div class="article-tone-fact-check">
+            <h4>Analiza tona</h4>
+            <p>${toneHtml}</p>
+            <h4>Provera činjenica</h4>
+            <p>${factCheckHtml}</p>
+        </div>
     `;
 }
 

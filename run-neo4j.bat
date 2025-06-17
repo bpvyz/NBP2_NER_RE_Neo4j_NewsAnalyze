@@ -39,11 +39,11 @@ if "!neo4j_pass:~0,8!"=="!neo4j_pass!" (
     goto get_password
 )
 
-:get_openai_key
-set /p "openai_key=Enter your OpenAI API key (required): "
+:get_openrouter_key
+set /p "openai_key=Enter your OpenRouter API key (required): "
 if "!openai_key!"=="" (
-    echo OpenAI API key is required for NLP processing
-    goto get_openai_key
+    echo OpenRouter API key is required for NLP processing
+    goto get_openrouter_key
 )
 
 :: Create .env file
